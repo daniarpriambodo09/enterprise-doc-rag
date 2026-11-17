@@ -7,15 +7,26 @@ import {
   uploadDocument,
   sendChatQuery,
   deleteDocument,
+  fetchSessions,
+  fetchSessionDetail,
+  deleteSession,
   DocumentItem,
+  ChatSessionItem,
 } from "../lib/api";
 import Sidebar from "../components/Sidebar";
 import Header from "../components/Header";
 import ChatMessage, { ChatMessageData } from "../components/ChatMessage";
 import EmptyState from "../components/EmptyState";
 
-function getCurrentTimeLabel() {
-  return new Date().toLocaleTimeString("id-ID", {
+function formatTimeLabel(dateInput?: string) {
+  const date = dateInput ? new Date(dateInput) : new Date();
+  if (Number.isNaN(date.getTime())) {
+    return new Date().toLocaleTimeString("id-ID", {
+      hour: "2-digit",
+      minute: "2-digit",
+    });
+  }
+  return date.toLocaleTimeString("id-ID", {
     hour: "2-digit",
     minute: "2-digit",
   });
@@ -23,12 +34,16 @@ function getCurrentTimeLabel() {
 
 export default function RagWorkspace() {
   const [documents, setDocuments] = useState<DocumentItem[]>([]);
+  const [sessions, setSessions] = useState<ChatSessionItem[]>([]);
+  const [activeSessionId, setActiveSessionId] = useState<string | null>(null);
   const [messages, setMessages] = useState<ChatMessageData[]>([]);
   const [input, setInput] = useState("");
   const [topK, setTopK] = useState<number>(5);
   const [isLoadingChat, setIsLoadingChat] = useState(false);
+  const [isLoadingSession, setIsLoadingSession] = useState(false);
   const [isUploading, setIsUploading] = useState(false);
   const [deletingFilename, setDeletingFilename] = useState<string | null>(null);
+  const [deletingSessionId, setDeletingSessionId] = useState<string | null>(null);
   const [uploadStatus, setUploadStatus] = useState<{
     type: "success" | "error";
     text: string;
@@ -47,8 +62,18 @@ export default function RagWorkspace() {
     }
   };
 
+  const loadSessions = async () => {
+    try {
+      const data = await fetchSessions();
+      setSessions(data);
+    } catch (err) {
+      console.error(err);
+    }
+  };
+
   useEffect(() => {
     loadDocs();
+    loadSessions();
   }, []);
 
   useEffect(() => {
@@ -76,9 +101,13 @@ export default function RagWorkspace() {
     setUploadStatus(null);
     try {
       const res = await uploadDocument(file);
+      const modeText =
+        res.ingestion_mode === "multimodal"
+          ? "Multimodal AI"
+          : "Ekstraksi Teks";
       setUploadStatus({
         type: "success",
-        text: `${res.filename} berhasil diindeks (${res.total_chunks} chunks)`,
+        text: `${res.filename} berhasil diindeks (${res.total_chunks} chunks • ${modeText})`,
       });
       await loadDocs();
     } catch (err: unknown) {
@@ -107,6 +136,49 @@ export default function RagWorkspace() {
     }
   };
 
+  const handleSelectSession = async (sessionId: string) => {
+    if (isLoadingChat || isLoadingSession) return;
+    setIsLoadingSession(true);
+    try {
+      const detail = await fetchSessionDetail(sessionId);
+      setActiveSessionId(detail.session.id);
+      setMessages(
+        detail.messages.map((m) => ({
+          id: m.id,
+          role: m.role,
+          content: m.content,
+          sources: m.sources,
+          timestamp: formatTimeLabel(m.created_at),
+        }))
+      );
+    } catch (err) {
+      console.error(err);
+    } finally {
+      setIsLoadingSession(false);
+    }
+  };
+
+  const handleDeleteSession = async (sessionId: string) => {
+    setDeletingSessionId(sessionId);
+    try {
+      await deleteSession(sessionId);
+      if (activeSessionId === sessionId) {
+        setActiveSessionId(null);
+        setMessages([]);
+      }
+      await loadSessions();
+    } catch (err) {
+      console.error(err);
+    } finally {
+      setDeletingSessionId(null);
+    }
+  };
+
+  const handleNewChat = () => {
+    setActiveSessionId(null);
+    setMessages([]);
+  };
+
   const submitQuery = async (rawQuery: string) => {
     const userQuery = rawQuery.trim();
     if (!userQuery || isLoadingChat) return;
@@ -116,7 +188,7 @@ export default function RagWorkspace() {
       id: `user-${Date.now()}`,
       role: "user",
       content: userQuery,
-      timestamp: getCurrentTimeLabel(),
+      timestamp: formatTimeLabel(),
     };
 
     setMessages((prev) => [...prev, userMsg]);
@@ -124,8 +196,12 @@ export default function RagWorkspace() {
 
     const startTime = performance.now();
     try {
-      const data = await sendChatQuery(userQuery, topK);
+      const data = await sendChatQuery(userQuery, topK, activeSessionId);
       const latencyMs = performance.now() - startTime;
+
+      if (data.session_id && data.session_id !== activeSessionId) {
+        setActiveSessionId(data.session_id);
+      }
 
       setMessages((prev) => [
         ...prev,
@@ -135,9 +211,11 @@ export default function RagWorkspace() {
           content: data.answer,
           sources: data.sources,
           latencyMs,
-          timestamp: getCurrentTimeLabel(),
+          timestamp: formatTimeLabel(),
         },
       ]);
+
+      await loadSessions();
     } catch {
       setMessages((prev) => [
         ...prev,
@@ -145,9 +223,9 @@ export default function RagWorkspace() {
           id: `error-${Date.now()}`,
           role: "assistant",
           content:
-            "Maaf, terjadi gangguan saat menghubungi server RAG. Pastikan backend FastAPI aktif dan dapat diakses.",
+            "Maaf, terjadi gangguan saat menghubungi server RAG. Pastikan backend & koneksi database aktif.",
           isError: true,
-          timestamp: getCurrentTimeLabel(),
+          timestamp: formatTimeLabel(),
         },
       ]);
     } finally {
@@ -167,10 +245,6 @@ export default function RagWorkspace() {
     }
   };
 
-  const handleClearChat = () => {
-    setMessages([]);
-  };
-
   return (
     <div className="flex h-screen bg-slate-950 text-slate-100 font-sans overflow-hidden relative">
       {/* Ambient Radial Glow */}
@@ -183,13 +257,19 @@ export default function RagWorkspace() {
       <div className="relative z-20 h-full">
         <Sidebar
           documents={documents}
+          sessions={sessions}
+          activeSessionId={activeSessionId}
           isUploading={isUploading}
           deletingFilename={deletingFilename}
+          deletingSessionId={deletingSessionId}
           uploadStatus={uploadStatus}
           topK={topK}
           onTopKChange={setTopK}
           onUploadFile={handleFileUpload}
           onDeleteDocument={handleDeleteDocument}
+          onNewChat={handleNewChat}
+          onSelectSession={handleSelectSession}
+          onDeleteSession={handleDeleteSession}
           isOpenMobile={isMobileSidebarOpen}
           onCloseMobile={() => setIsMobileSidebarOpen(false)}
         />
@@ -199,13 +279,18 @@ export default function RagWorkspace() {
       <main className="flex-1 flex flex-col min-w-0 relative z-10 bg-grid-pattern">
         <Header
           onOpenMobileSidebar={() => setIsMobileSidebarOpen(true)}
-          onClearChat={handleClearChat}
+          onClearChat={handleNewChat}
           hasMessages={messages.length > 0}
         />
 
         {/* Messages Feed */}
         <div className="flex-1 overflow-y-auto px-4 sm:px-6 py-6 space-y-6">
-          {messages.length === 0 ? (
+          {isLoadingSession ? (
+            <div className="flex items-center justify-center py-20 text-slate-400 gap-2.5 text-sm">
+              <Loader2 className="w-4 h-4 animate-spin text-indigo-400" />
+              <span>Memuat riwayat percakapan...</span>
+            </div>
+          ) : messages.length === 0 ? (
             <EmptyState
               documentCount={documents.length}
               onSelectPrompt={(prompt) => submitQuery(prompt)}
@@ -248,7 +333,7 @@ export default function RagWorkspace() {
               value={input}
               onChange={(e) => setInput(e.target.value)}
               onKeyDown={handleKeyDown}
-              placeholder="Tanyakan isi dokumen, prosedur SOP, atau data tabel... (Enter untuk kirim)"
+              placeholder="Tanyakan isi dokumen, prosedur SOP, tabel, atau grafik... (Enter untuk kirim)"
               className="flex-1 bg-transparent py-2 text-sm text-slate-100 placeholder-slate-500 focus:outline-none resize-none max-h-40 leading-relaxed"
             />
             <button

@@ -49,5 +49,30 @@ export async function ensureSchema() {
     ON document_chunks USING hnsw (embedding vector_cosine_ops);
   `;
 
+  await sql`
+    CREATE TABLE IF NOT EXISTS chat_sessions (
+      id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+      title TEXT NOT NULL,
+      created_at TIMESTAMPTZ DEFAULT NOW(),
+      updated_at TIMESTAMPTZ DEFAULT NOW()
+    );
+  `;
+
+  await sql`
+    CREATE TABLE IF NOT EXISTS chat_messages (
+      id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+      session_id UUID NOT NULL REFERENCES chat_sessions(id) ON DELETE CASCADE,
+      role TEXT NOT NULL,
+      content TEXT NOT NULL,
+      sources JSONB,
+      created_at TIMESTAMPTZ DEFAULT NOW()
+    );
+  `;
+
+  await sql`
+    CREATE INDEX IF NOT EXISTS chat_messages_session_idx
+    ON chat_messages (session_id, created_at ASC);
+  `;
+
   schemaInitialized = true;
 }

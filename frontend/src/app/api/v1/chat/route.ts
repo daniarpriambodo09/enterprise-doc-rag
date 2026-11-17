@@ -5,12 +5,15 @@ import { getEmbedding } from "@/lib/server/gemini";
 
 export const maxDuration = 60;
 
+const UUID_REGEX =
+  /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
 const SYSTEM_PROMPT = `Kamu adalah Asisten AI Analisis Dokumen Perusahaan yang akurat dan objektif.
 Aturan wajib:
-1. Jawab pertanyaan HANYA berdasarkan konteks dokumen yang diberikan di bawah ini.
+1. Jawab pertanyaan HANYA berdasarkan konteks dokumen yang diberikan di bawah ini (serta riwayat percakapan untuk memahami rujukan pertanyaan lanjutan).
 2. Setiap klaim atau angka penting WAJIB menyertakan sitasi sumber dengan format [Nama File, Hal. X].
 3. Jika jawaban tidak ditemukan secara eksplisit di dalam konteks, katakan dengan jujur: "Maaf, informasi tersebut tidak ditemukan dalam dokumen yang tersedia." Jangan mengarang atau berasumsi.
-4. Jika konteks memuat tabel Markdown, baca baris dan kolomnya dengan teliti sebelum menjawab.
+4. Jika konteks memuat tabel Markdown atau deskripsi visual [Analisis Visual/Gambar Halaman X], baca dan manfaatkan informasinya dengan teliti sebelum menjawab.
 5. Gunakan Bahasa Indonesia yang formal, jelas, dan terstruktur.`;
 
 export async function POST(req: NextRequest) {
@@ -18,6 +21,10 @@ export async function POST(req: NextRequest) {
     const body = await req.json();
     const query = typeof body?.query === "string" ? body.query.trim() : "";
     const topK = Math.min(20, Math.max(1, Number(body?.top_k) || 5));
+    const requestedSessionId =
+      typeof body?.session_id === "string" && UUID_REGEX.test(body.session_id)
+        ? body.session_id
+        : null;
 
     if (!query) {
       return NextResponse.json(
@@ -34,10 +41,53 @@ export async function POST(req: NextRequest) {
     await ensureSchema();
     const sql = getDb();
 
+    // 1. Pastikan sesi percakapan tersedia atau buat sesi baru
+    let activeSessionId: string | null = null;
+    if (requestedSessionId) {
+      const existing = await sql`
+        SELECT id FROM chat_sessions WHERE id = ${requestedSessionId}::uuid;
+      `;
+      if (existing.length > 0) {
+        activeSessionId = String(existing[0].id);
+      }
+    }
+
+    if (!activeSessionId) {
+      const cleanTitle =
+        query.length > 45 ? `${query.slice(0, 45).trimEnd()}...` : query;
+      const insertedSession = await sql`
+        INSERT INTO chat_sessions (title)
+        VALUES (${cleanTitle})
+        RETURNING id;
+      `;
+      activeSessionId = String(insertedSession[0].id);
+    }
+
+    // 2. Ambil 6 pesan terakhir untuk konteks percakapan lanjutan (follow-up questions)
+    const historyRows = await sql`
+      SELECT role, content
+      FROM chat_messages
+      WHERE session_id = ${activeSessionId}::uuid
+      ORDER BY created_at DESC
+      LIMIT 6;
+    `;
+    const conversationHistory = historyRows
+      .reverse()
+      .map((m) => ({
+        role: (m.role === "user" ? "user" : "assistant") as "user" | "assistant",
+        content: String(m.content),
+      }));
+
+    // 3. Simpan pesan user ke database
+    await sql`
+      INSERT INTO chat_messages (session_id, role, content, sources)
+      VALUES (${activeSessionId}::uuid, 'user', ${query}, NULL);
+    `;
+
+    // 4. Hybrid Search (70% Semantic Cosine Similarity + 30% PostgreSQL ts_rank Lexical Score)
     const queryEmbedding = await getEmbedding(query);
     const vecLiteral = JSON.stringify(queryEmbedding);
 
-    // Hybrid Search: 70% Semantic Cosine Similarity + 30% PostgreSQL ts_rank Lexical Score
     const rows = await sql`
       WITH candidates AS (
         SELECT
@@ -77,45 +127,66 @@ export async function POST(req: NextRequest) {
       LIMIT ${topK};
     `;
 
+    let answerText: string;
+    let sources: {
+      filename: string;
+      page_number: number;
+      score: number;
+      snippet: string;
+    }[] = [];
+
     if (rows.length === 0) {
-      return NextResponse.json({
-        answer:
-          "Belum ada dokumen yang diunggah atau tidak ditemukan konteks yang relevan.",
-        sources: [],
+      answerText =
+        "Belum ada dokumen yang diunggah atau tidak ditemukan konteks yang relevan.";
+    } else {
+      const contextBlocks = rows.map(
+        (chunk) =>
+          `--- SUMBER: ${chunk.filename} (Halaman ${chunk.page_number}) ---\n${chunk.content}`
+      );
+      const fullContext = contextBlocks.join("\n\n");
+      const userMessage = `Konteks Dokumen:\n${fullContext}\n\nPertanyaan Pengguna:\n${query}`;
+
+      const groq = new Groq({ apiKey: groqApiKey });
+      const completion = await groq.chat.completions.create({
+        model: process.env.LLM_MODEL || "openai/gpt-oss-20b",
+        messages: [
+          { role: "system", content: SYSTEM_PROMPT },
+          ...conversationHistory,
+          { role: "user", content: userMessage },
+        ],
+        temperature: 0.1,
+        max_completion_tokens: 1500,
       });
-    }
 
-    const contextBlocks = rows.map(
-      (chunk) =>
-        `--- SUMBER: ${chunk.filename} (Halaman ${chunk.page_number}) ---\n${chunk.content}`
-    );
-    const fullContext = contextBlocks.join("\n\n");
+      answerText =
+        completion.choices?.[0]?.message?.content ||
+        "Maaf, tidak ada respons yang dihasilkan oleh model.";
 
-    const userMessage = `Konteks Dokumen:\n${fullContext}\n\nPertanyaan Pengguna:\n${query}`;
-
-    const groq = new Groq({ apiKey: groqApiKey });
-    const completion = await groq.chat.completions.create({
-      model: process.env.LLM_MODEL || "openai/gpt-oss-20b",
-      messages: [
-        { role: "system", content: SYSTEM_PROMPT },
-        { role: "user", content: userMessage },
-      ],
-      temperature: 0.1,
-      max_completion_tokens: 1500,
-    });
-
-    const answerText =
-      completion.choices?.[0]?.message?.content ||
-      "Maaf, tidak ada respons yang dihasilkan oleh model.";
-
-    return NextResponse.json({
-      answer: answerText,
-      sources: rows.map((c) => ({
+      sources = rows.map((c) => ({
         filename: String(c.filename),
         page_number: Number(c.page_number),
         score: Number(c.score),
         snippet: String(c.content).slice(0, 250) + "...",
-      })),
+      }));
+    }
+
+    // 5. Simpan balasan assistant beserta sources & perbarui updated_at sesi
+    const sourcesJson = JSON.stringify(sources);
+    await sql`
+      INSERT INTO chat_messages (session_id, role, content, sources)
+      VALUES (${activeSessionId}::uuid, 'assistant', ${answerText}, ${sourcesJson}::jsonb);
+    `;
+
+    await sql`
+      UPDATE chat_sessions
+      SET updated_at = NOW()
+      WHERE id = ${activeSessionId}::uuid;
+    `;
+
+    return NextResponse.json({
+      session_id: activeSessionId,
+      answer: answerText,
+      sources,
     });
   } catch (error: unknown) {
     console.error("Chat error:", error);

@@ -2,7 +2,11 @@ import { NextRequest, NextResponse } from "next/server";
 import { extractText } from "unpdf";
 import { ensureSchema, getDb } from "@/lib/server/db";
 import { chunkPages } from "@/lib/server/chunker";
-import { getBatchEmbeddings } from "@/lib/server/gemini";
+import {
+  extractMultimodalPdfContent,
+  getBatchEmbeddings,
+  type ExtractedPdfPage,
+} from "@/lib/server/gemini";
 
 export const maxDuration = 60;
 
@@ -26,23 +30,38 @@ export async function POST(req: NextRequest) {
     }
 
     const arrayBuffer = await file.arrayBuffer();
-    const { text } = await extractText(new Uint8Array(arrayBuffer), {
-      mergePages: false,
-    });
-    const pages = text.map((pageText, idx) => ({
-      pageNumber: idx + 1,
-      text: pageText,
-    }));
+    const buffer = Buffer.from(arrayBuffer);
+
+    let pages: ExtractedPdfPage[] = [];
+    let ingestionMode: "multimodal" | "text-fallback" = "multimodal";
+
+    // Utama: Ekstraksi Multimodal (Teks + Gambar/Grafik/Diagram/Tabel) via Gemini 2.5 Flash
+    try {
+      pages = await extractMultimodalPdfContent(buffer);
+    } catch (multimodalError) {
+      console.warn(
+        "Multimodal PDF extraction failed or exceeded limit, falling back to unpdf:",
+        multimodalError
+      );
+      ingestionMode = "text-fallback";
+      const { text } = await extractText(new Uint8Array(arrayBuffer), {
+        mergePages: false,
+      });
+      pages = text.map((pageText, idx) => ({
+        pageNumber: idx + 1,
+        text: pageText,
+      }));
+    }
 
     const chunks = chunkPages(pages, file.name, 800, 150);
     if (chunks.length === 0) {
       return NextResponse.json(
-        { detail: "Tidak ada teks yang bisa diekstrak dari PDF ini." },
+        { detail: "Tidak ada teks atau konten visual yang bisa diekstrak dari PDF ini." },
         { status: 400 }
       );
     }
 
-    // Generate embedding dalam batch (maks 50 per request untuk keamanan kuota/payload)
+    // Generate embedding dalam batch (maks 50 per request)
     const embeddings: number[][] = [];
     const batchSize = 50;
     for (let i = 0; i < chunks.length; i += batchSize) {
@@ -71,12 +90,18 @@ export async function POST(req: NextRequest) {
       `;
     }
 
+    const modeLabel =
+      ingestionMode === "multimodal"
+        ? "Multimodal AI (Teks & Visual)"
+        : "Ekstraksi Teks (Fallback)";
+
     return NextResponse.json({
       status: "success",
       filename: file.name,
       total_chunks: chunks.length,
       overwritten_chunks: overwrittenChunks,
-      message: `Dokumen berhasil diproses menjadi ${chunks.length} bagian dan disimpan ke database.`,
+      ingestion_mode: ingestionMode,
+      message: `${file.name} berhasil diproses (${chunks.length} chunks) via ${modeLabel}.`,
     });
   } catch (error: unknown) {
     console.error("Upload error:", error);
