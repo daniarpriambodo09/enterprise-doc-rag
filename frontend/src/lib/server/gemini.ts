@@ -10,17 +10,13 @@ function getGeminiClient() {
 
 const EMBEDDING_MODEL = process.env.EMBEDDING_MODEL || "gemini-embedding-001";
 const MAX_INLINE_PDF_BYTES = 15 * 1024 * 1024; // 15 MB limit for inline multimodal ingestion
-const RETRY_DELAYS_MS = [1500, 3000, 5000];
+const VISION_TIMEOUT_MS = 12_000; // Fast-fail 12 detik per model
 
 export function isVisionUnavailableError(err: unknown): boolean {
   const msg = err instanceof Error ? err.message : String(err ?? "");
-  return /\b(503|429)\b|UNAVAILABLE|RESOURCE_EXHAUSTED|high demand|overloaded|rate limit/i.test(
+  return /\b(503|429)\b|UNAVAILABLE|RESOURCE_EXHAUSTED|high demand|overloaded|rate limit|timed out|timeout|AbortError/i.test(
     msg
   );
-}
-
-function sleep(ms: number): Promise<void> {
-  return new Promise((resolve) => setTimeout(resolve, ms));
 }
 
 export interface ExtractedPdfPage {
@@ -59,83 +55,72 @@ Pastikan seluruh halaman diekstrak tanpa melewatkan informasi penting.`;
   const visionModels = Array.from(
     new Set(
       [
-        process.env.VISION_MODEL || "gemini-3.8-flash",
+        process.env.VISION_MODEL,
+        "gemini-2.5-flash-lite",
+        "gemini-2.0-flash",
         "gemini-3.8-flash-lite",
-        "gemini-2.5-flash",
-      ].filter(Boolean)
+        "gemini-3.8-flash",
+      ].filter((m): m is string => Boolean(m))
     )
   );
 
   let lastError: unknown = null;
   let rawJson: string | undefined;
 
+  // Fast-Fail: maksimal 1x percobaan per model dengan timeout 12 detik
   for (const modelName of visionModels) {
-    for (let attempt = 0; attempt < RETRY_DELAYS_MS.length; attempt++) {
-      try {
-        const response = await ai.models.generateContent({
-          model: modelName,
-          contents: [
-            {
-              inlineData: {
-                mimeType: "application/pdf",
-                data: base64Pdf,
-              },
-            },
-            prompt,
-          ],
-          config: {
-            temperature: 0.1,
-            responseMimeType: "application/json",
-            responseSchema: {
-              type: Type.OBJECT,
-              properties: {
-                pages: {
-                  type: Type.ARRAY,
-                  items: {
-                    type: Type.OBJECT,
-                    properties: {
-                      page_number: { type: Type.INTEGER },
-                      text: { type: Type.STRING },
-                      visual_descriptions: {
-                        type: Type.ARRAY,
-                        items: { type: Type.STRING },
-                      },
-                    },
-                    required: ["page_number", "text", "visual_descriptions"],
-                  },
-                },
-              },
-              required: ["pages"],
+    try {
+      const response = await ai.models.generateContent({
+        model: modelName,
+        contents: [
+          {
+            inlineData: {
+              mimeType: "application/pdf",
+              data: base64Pdf,
             },
           },
-        });
+          prompt,
+        ],
+        config: {
+          abortSignal: AbortSignal.timeout(VISION_TIMEOUT_MS),
+          temperature: 0.1,
+          responseMimeType: "application/json",
+          responseSchema: {
+            type: Type.OBJECT,
+            properties: {
+              pages: {
+                type: Type.ARRAY,
+                items: {
+                  type: Type.OBJECT,
+                  properties: {
+                    page_number: { type: Type.INTEGER },
+                    text: { type: Type.STRING },
+                    visual_descriptions: {
+                      type: Type.ARRAY,
+                      items: { type: Type.STRING },
+                    },
+                  },
+                  required: ["page_number", "text", "visual_descriptions"],
+                },
+              },
+            },
+            required: ["pages"],
+          },
+        },
+      });
 
-        if (response.text) {
-          rawJson = response.text;
-          break;
-        }
-        throw new Error(`Respons kosong dari ${modelName} saat ekstraksi PDF.`);
-      } catch (err) {
-        lastError = err;
-        const transient = isVisionUnavailableError(err);
-        console.warn(
-          `[Gemini Vision] Model ${modelName} attempt ${attempt + 1}/${RETRY_DELAYS_MS.length} failed:`,
-          err instanceof Error ? err.message : err
-        );
-
-        if (transient && attempt < RETRY_DELAYS_MS.length - 1) {
-          await sleep(RETRY_DELAYS_MS[attempt]);
-          continue;
-        }
-        if (transient) {
-          // Jeda singkat sebelum pindah ke model berikutnya
-          await sleep(RETRY_DELAYS_MS[attempt]);
-        }
+      if (response.text) {
+        rawJson = response.text;
         break;
       }
+      throw new Error(`Respons kosong dari ${modelName} saat ekstraksi PDF.`);
+    } catch (err) {
+      lastError = err;
+      console.warn(
+        `[Gemini Vision Fast-Fail] Model ${modelName} failed:`,
+        err instanceof Error ? err.message : err
+      );
     }
-
-    if (rawJson) break;
   }
 
   if (!rawJson) {

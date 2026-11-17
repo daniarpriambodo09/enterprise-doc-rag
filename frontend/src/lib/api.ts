@@ -1,7 +1,7 @@
 import { PDFDocument } from "pdf-lib";
 
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || "/api/v1";
-const MAX_UPLOAD_BATCH_BYTES = 2.5 * 1024 * 1024; // 2.5 MB per batch agar payload Gemini Vision ringan & di bawah limit 4.5 MB Vercel
+const MAX_UPLOAD_BATCH_BYTES = 2 * 1024 * 1024; // 2 MB: PDF > 2 MB dipecah 1 halaman/batch agar cepat & bebas timeout Vercel
 
 export interface SourceCitation {
     filename: string;
@@ -65,8 +65,16 @@ async function postUploadBatch(
     });
 
     if (!res.ok) {
-        const err = await res.json().catch(() => ({ detail: "Gagal mengunggah file" }));
-        throw new Error(err.detail || "Gagal mengunggah file");
+        let detail = `Gagal mengunggah file (HTTP ${res.status})`;
+        try {
+            const err = await res.json();
+            if (err?.detail) detail = err.detail;
+        } catch {
+            if (res.status === 504) {
+                detail = "Server timeout saat memproses PDF. Silakan coba lagi atau gunakan file yang lebih ringkas.";
+            }
+        }
+        throw new Error(detail);
     }
     return res.json();
 }
@@ -107,14 +115,8 @@ export async function uploadDocument(
     let cursor = 0;
 
     while (cursor < totalPages) {
-        let batchEnd = Math.min(cursor + 2, totalPages);
-        let subBytes = await createSubPdfBytes(sourceDoc, cursor, batchEnd);
-
-        // Jika 2 halaman masih > 2.5 MB, turunkan ke 1 halaman per batch
-        if (subBytes.byteLength > MAX_UPLOAD_BATCH_BYTES && batchEnd - cursor > 1) {
-            batchEnd = cursor + 1;
-            subBytes = await createSubPdfBytes(sourceDoc, cursor, batchEnd);
-        }
+        const batchEnd = cursor + 1;
+        const subBytes = await createSubPdfBytes(sourceDoc, cursor, batchEnd);
 
         if (subBytes.byteLength > 4.4 * 1024 * 1024) {
             throw new Error(
@@ -122,7 +124,7 @@ export async function uploadDocument(
             );
         }
 
-        onProgress?.(`Memproses halaman ${cursor + 1}–${batchEnd} dari ${totalPages}...`);
+        onProgress?.(`Memproses halaman ${cursor + 1} dari ${totalPages}...`);
         const batchArrayBuffer = subBytes.slice().buffer;
         const batchBlob = new Blob([batchArrayBuffer], { type: "application/pdf" });
         const res = await postUploadBatch(batchBlob, file.name, cursor, isFirst);
