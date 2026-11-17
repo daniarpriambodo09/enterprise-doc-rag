@@ -1,30 +1,30 @@
 # Enterprise Document RAG Workspace
 
-A production-ready **Retrieval-Augmented Generation (RAG)** system engineered for analyzing complex enterprise PDFs (SOPs, technical specifications, policies, and financial tables) with **layout-aware Markdown parsing**, **Hybrid Search (`pgvector` + BM25)**, **strict anti-hallucination guardrails**, and **verifiable page-level citations**.
+Sistem **Retrieval-Augmented Generation (RAG)** siap produksi untuk menganalisis dokumen PDF perusahaan yang kompleks (SOP, spesifikasi teknis, kebijakan, laporan, hingga CV) menggunakan **parsing Markdown berbasis layout**, **Hybrid Search (`pgvector` + BM25)**, **guardrails anti-halusinasi**, serta **sitasi sumber per halaman yang dapat diverifikasi**.
 
 ---
 
-## Key Engineering Highlights
+## Keunggulan Teknis (*Key Engineering Highlights*)
 
-- **Layout-Aware PDF & Table Parsing (`pymupdf4llm`)**: Converts multi-page PDFs into structured Markdown per page, preserving complex tables, headings, and reading order while retaining exact `page_number` metadata across overlapping chunks.
+- **Layout-Aware PDF & Table Parsing (`pymupdf4llm`)**: Mengekstrak PDF multi-halaman menjadi Markdown terstruktur per halaman sehingga tabel, heading, dan urutan baca tetap utuh, sekaligus mempertahankan metadata `page_number` di setiap chunk.
 - **Two-Stage Hybrid Search (`pgvector` HNSW + BM25 Reranking)**:
-  1. **Semantic Retrieval**: Queries PostgreSQL `pgvector` (768-dim Gemini embeddings with HNSW cosine index) to fetch the top-15 semantic candidates.
-  2. **Lexical Reranking**: Applies `BM25Okapi` over the candidate set and fuses scores (`0.7 * semantic + 0.3 * normalized_bm25`) to capture both conceptual intent and exact domain keywords/codes.
-- **Strict Anti-Hallucination Guardrails**: Enforces grounded generation (`temperature=0.1`) with mandatory `[Filename, Hal. X]` inline citations and explicit refusal when answers are absent from retrieved context.
-- **Idempotent Knowledge Base Management**:
-  - Automatic overwrite/deduplication on `POST /api/v1/upload` when re-uploading an existing filename.
-  - Full document & embedding lifecycle deletion via `DELETE /api/v1/documents/{filename}`.
-- **Quantitative Evaluation Pipeline**: Built-in RAG evaluation harness (`eval_rag.py`) measuring **Recall@5**, **LLM-as-a-Judge Faithfulness**, and **End-to-End Latency**.
+  1. **Semantic Retrieval**: Mengambil 15 kandidat teratas dari PostgreSQL `pgvector` (embedding Gemini 768-dimensi dengan indeks cosine HNSW).
+  2. **Lexical Reranking**: Menghitung skor `BM25Okapi` di atas kandidat tersebut lalu menggabungkan skor (`0.7 * semantic + 0.3 * normalized_bm25`) agar akurat untuk makna semantik maupun istilah/kode spesifik.
+- **Guardrails Anti-Halusinasi Ketat**: Generasi jawaban dengan `temperature=0.1` yang mewajibkan sitasi `[Nama File, Hal. X]` pada setiap klaim penting, serta menolak menjawab secara jujur apabila informasi tidak tersedia di dalam konteks dokumen.
+- **Manajemen Basis Pengetahuan Idempoten**:
+  - **Anti-Duplikasi / Overwrite**: Endpoint `POST /api/v1/upload` otomatis menghapus chunk lama dengan `filename` yang sama sebelum menyimpan chunk baru.
+  - **Hapus Dokumen**: Endpoint `DELETE /api/v1/documents/{filename}` menghapus seluruh chunk beserta vektor embedding-nya dari database.
+- **Pipeline Evaluasi Kuantitatif**: Skrip `eval_rag.py` untuk mengukur **Recall@5**, **Faithfulness Score (LLM-as-a-Judge)**, dan **End-to-End Latency** secara otomatis.
 
 ---
 
-## System Architecture
+## Arsitektur Sistem
 
 ```mermaid
 flowchart LR
     subgraph Client ["Frontend (Next.js 16 + Tailwind CSS)"]
-        UI["Chat & Document Workspace"]
-        Cite["Citation & Relevance Inspector"]
+        UI["Workspace Chat & Manajemen Dokumen"]
+        Cite["Inspektor Sitasi & Skor Relevansi"]
     end
 
     subgraph API ["Backend (FastAPI)"]
@@ -45,81 +45,129 @@ flowchart LR
         Groq["Groq Inference API"]
     end
 
-    UI -->|Upload PDF| Upload --> Parser --> Gemini --> DB
-    UI -->|Delete Doc| Delete --> DB
-    UI -->|Query + Top-K| Chat --> Retriever
+    UI -->|Unggah PDF| Upload --> Parser --> Gemini --> DB
+    UI -->|Hapus Dokumen| Delete --> DB
+    UI -->|Pertanyaan + Top-K| Chat --> Retriever
     Retriever -->|Query Embedding| Gemini
     Retriever <-->|Top-15 Cosine + BM25| DB
     Retriever --> Generator --> Groq
-    Generator -->|Answer + Sources| UI --> Cite
+    Generator -->|Jawaban + Sumber| UI --> Cite
 ```
+
+---
+
+## Poin yang Perlu Diperlihatkan (Demo & Portofolio Showcase)
+
+Saat mempresentasikan proyek ini kepada rekruter atau tim teknis, berikut fitur dan kapabilitas utama yang layak ditunjukkan:
+
+1. **Unggah PDF Drag-and-Drop & Manajemen Dokumen**
+   - Tunjukkan proses unggah PDF melalui *drag-and-drop*, pencarian dokumen di sidebar, statistik jumlah dokumen & total chunk, fitur *overwrite* anti-duplikasi saat file yang sama diunggah ulang, serta tombol hapus dokumen dengan konfirmasi inline.
+2. **Jawaban Terstruktur (Tabel Markdown & Daftar Poin)**
+   - Ajukan pertanyaan analitis (misalnya perbandingan proyek atau ekstraksi *Technical Skills*) untuk memperlihatkan kemampuan sistem merangkai tabel Markdown yang rapi lengkap dengan sitasi halaman.
+3. **Inspektor Bukti & Skor Relevansi (*Source Citations*)**
+   - Buka panel **"Sumber Referensi"** di bawah jawaban AI untuk menunjukkan potongan teks asli (*snippet*), nomor halaman, serta *progress bar* skor relevansi gabungan (Hybrid Score).
+4. **Uji *Guardrails* Anti-Halusinasi (*Out-of-Context*)**
+   - Ajukan pertanyaan yang tidak ada di dalam dokumen (contoh: nominal gaji atau kebijakan cuti pada dokumen CV) untuk membuktikan AI menjawab jujur *"Maaf, informasi tersebut tidak ditemukan dalam dokumen yang tersedia"* tanpa mengarang fakta.
+5. **Kontrol *Retrieval Top-K* & Indikator *Latency***
+   - Ubah nilai **Retrieval Top-K** (`3`, `5`, `8`, `10`) di sidebar dan perhatikan metrik waktu respons (*latency*) serta tombol salin jawaban pada setiap kartu respons AI.
+6. **Bukti Evaluasi Kuantitatif (`eval_rag.py`)**
+   - Tunjukkan hasil benchmark terukur pada file `backend/evaluation/eval_report.json` sebagai validasi performa sistem RAG secara objektif.
+
+---
+
+## Hasil Evaluasi Kuantitatif RAG
+
+Evaluasi dijalankan menggunakan `backend/evaluation/eval_rag.py` terhadap 8 skenario uji (`backend/evaluation/test_dataset.json`) pada dokumen terindeks `CV_Daniar Priambodo_Backend Developer.pdf` (Halaman 1) dengan konfigurasi `Top-K = 5`.
+
+### Ringkasan Metrik
+
+| Metrik | Hasil Terukur | Keterangan |
+| :--- | :---: | :--- |
+| **Total Skenario Uji** | **8** | 6 pertanyaan *in-context* + 2 pertanyaan *out-of-context* (guardrail) |
+| **Retrieval Hit Rate (Recall@5)** | **100.0%** (`1.0`) | Seluruh `expected_page` berhasil ditemukan pada top-5 hasil hybrid search |
+| **Average Faithfulness Score** | **0.750 / 1.000** | 6/8 skenario meraih skor `1.00`; 2 skenario (`Q1`, `Q5`) gagal validasi JSON pada API LLM Judge (`json_validate_failed`) |
+| **Average End-to-End Latency** | **9.745 s** | Waktu murni proses RAG (`hybrid_search` + `generate_answer`) |
+
+### Rincian Hasil per Skenario (`eval_report.json`)
+
+| ID | Kategori | Recall@5 | Faithfulness | Latency | Catatan |
+| :--- | :--- | :---: | :---: | :---: | :--- |
+| **Q1** | Technical Skills Extraction | HIT | `0.00`* | `1.76s` | *Error validasi JSON pada LLM Judge (`400 json_validate_failed`) |
+| **Q2** | Internship Experience | HIT | `1.00` | `1.42s` | Seluruh klaim didukung penuh oleh konteks |
+| **Q3** | Project Detail (E-Checksheet) | HIT | `1.00` | `13.83s` | Seluruh klaim didukung penuh oleh konteks |
+| **Q4** | Project Detail (Culturace 2026) | HIT | `1.00` | `11.63s` | Seluruh fakta RAB & target peserta sesuai konteks |
+| **Q5** | Project Detail (Crypto Trading Bot) | HIT | `0.00`* | `10.74s` | *Error validasi JSON pada LLM Judge (`400 json_validate_failed`) |
+| **Q6** | AI & ML Projects (Beyond AI & Langit.in) | HIT | `1.00` | `10.54s` | Perbandingan metode & metrik evaluasi akurat |
+| **Q7** | Guardrail / Out-of-Context (Gaji) | HIT | `1.00` | `13.62s` | AI menolak menjawab secara jujur tanpa halusinasi |
+| **Q8** | Guardrail / Out-of-Context (Cuti/Asuransi) | HIT | `1.00` | `14.41s` | AI menolak menjawab secara jujur tanpa halusinasi |
 
 ---
 
 ## Tech Stack
 
-| Layer | Technology |
+| Layer | Teknologi |
 | :--- | :--- |
 | **Frontend** | Next.js 16 (App Router), React 19, TypeScript, Tailwind CSS v4, `react-markdown`, `remark-gfm`, `lucide-react` |
 | **Backend** | FastAPI, Uvicorn, Pydantic v2, Python 3.11 |
-| **Vector Database** | PostgreSQL 16 + `pgvector` (HNSW cosine similarity index) |
-| **Parsing & Retrieval** | `pymupdf4llm`, `rank-bm25` (BM25Okapi) |
+| **Vector Database** | PostgreSQL 16 + `pgvector` (indeks cosine similarity HNSW) |
+| **Parsing & Retrieval** | `pymupdf4llm`, `rank-bm25` (`BM25Okapi`) |
 | **Embeddings & LLM** | Google `gemini-embedding-001` (768-dim), Groq (`openai/gpt-oss-20b`) |
 | **Containerization** | Docker, Docker Compose |
 
 ---
 
-## Project Structure
+## Struktur Direktori
 
 ```text
 enterprise-doc-rag/
-├── docker-compose.yml              # Local PostgreSQL + pgvector container
+├── docker-compose.yml              # Container PostgreSQL + pgvector lokal
 ├── README.md
 ├── backend/
-│   ├── Dockerfile                  # Lightweight python:3.11-slim image (no PyTorch GPU bloat)
+│   ├── Dockerfile                  # Image ringan python:3.11-slim (tanpa PyTorch GPU)
 │   ├── requirements.txt
 │   ├── app/
-│   │   ├── main.py                 # FastAPI app, CORS, lifespan DB init
+│   │   ├── main.py                 # Entrypoint FastAPI, CORS, inisialisasi DB
 │   │   ├── api/
-│   │   │   └── routes.py           # /upload (dedup), /chat, /documents, DELETE /documents/{filename}
+│   │   │   └── routes.py           # /upload (anti-duplikasi), /chat, /documents, DELETE /documents/{filename}
 │   │   ├── core/
-│   │   │   ├── config.py           # Environment settings via pydantic-settings
-│   │   │   └── database.py         # psycopg2 + pgvector HNSW schema initialization
+│   │   │   ├── config.py           # Konfigurasi environment via pydantic-settings
+│   │   │   └── database.py         # Koneksi psycopg2 & inisialisasi tabel/indeks HNSW
 │   │   └── services/
-│   │       ├── parser.py           # Layout-aware PDF-to-Markdown chunker
-│   │       ├── embedder.py         # Gemini batch & query embeddings
+│   │       ├── parser.py           # Chunker PDF-to-Markdown berbasis layout
+│   │       ├── embedder.py         # Generator embedding Gemini (batch & query)
 │   │       ├── retriever.py        # Hybrid Search (pgvector + BM25)
-│   │       └── generator.py        # Grounded LLM response + source snippets
+│   │       └── generator.py        # Generator jawaban LLM + sitasi sumber
 │   └── evaluation/
-│       ├── test_dataset.json       # Benchmark QA pairs with expected_page & ground_truth
-│       └── eval_rag.py             # Automated Recall@5, Faithfulness & Latency evaluator
+│       ├── test_dataset.json       # Dataset uji QA dengan expected_page & ground_truth
+│       ├── eval_rag.py             # Evaluator otomatis Recall@5, Faithfulness & Latency
+│       └── eval_report.json        # Laporan hasil evaluasi terbaru
 └── frontend/
     ├── package.json
     └── src/
-        ├── lib/api.ts              # Typed API client (fetch, upload, chat, delete)
+        ├── lib/api.ts              # Klien API terketik (fetch, upload, chat, delete)
         ├── app/
         │   ├── layout.tsx
         │   ├── globals.css
-        │   └── page.tsx            # Main RAG workspace & state orchestration
+        │   └── page.tsx            # Workspace utama RAG & orkestrasi state
         └── components/
             ├── Header.tsx
-            ├── Sidebar.tsx         # Drag-and-drop upload, search, delete, Top-K tuning
-            ├── EmptyState.tsx      # Hero welcome & suggested prompts
-            ├── ChatMessage.tsx     # User/AI message cards with latency & copy actions
-            ├── MarkdownRenderer.tsx# Custom GFM table, code block & markdown styling
-            └── SourceCitations.tsx # Expandable evidence & relevance score inspector
+            ├── Sidebar.tsx         # Upload drag-and-drop, cari, hapus dokumen, atur Top-K
+            ├── EmptyState.tsx      # Tampilan awal & contoh pertanyaan cepat
+            ├── ChatMessage.tsx     # Kartu pesan user/AI dengan latency & tombol salin
+            ├── MarkdownRenderer.tsx# Styling tabel GFM, code block, & newline <br>
+            └── SourceCitations.tsx # Panel inspeksi bukti & skor relevansi
 ```
 
 ---
 
-## Getting Started (Local Development)
+## Cara Menjalankan Secara Lokal
 
-### 1. Start PostgreSQL with `pgvector`
+### 1. Jalankan PostgreSQL dengan `pgvector`
 ```bash
 docker compose up -d
 ```
 
-### 2. Configure & Run the Backend
+### 2. Konfigurasi & Jalankan Backend
 ```bash
 cd backend
 python -m venv venv
@@ -131,7 +179,7 @@ venv\Scripts\activate
 pip install -r requirements.txt
 ```
 
-Create `backend/.env` (use `backend/.env.example` as a template):
+Buat file `backend/.env` (gunakan `backend/.env.example` sebagai acuan):
 ```env
 GROQ_API_KEY=your_groq_api_key
 LLM_MODEL=openai/gpt-oss-20b
@@ -140,66 +188,51 @@ EMBEDDING_MODEL=gemini-embedding-001
 DATABASE_URL=postgresql://raguser:ragpassword@localhost:5433/enterprise_rag
 ```
 
-Start the FastAPI server:
+Jalankan server FastAPI:
 ```bash
 uvicorn app.main:app --reload --port 8000
 ```
 
-### 3. Configure & Run the Frontend
+### 3. Konfigurasi & Jalankan Frontend
 ```bash
 cd frontend
 npm install
 ```
 
-Create `frontend/.env.local`:
+Buat file `frontend/.env.local`:
 ```env
 NEXT_PUBLIC_API_URL=http://127.0.0.1:8000/api/v1
 ```
 
-Start the Next.js development server:
+Jalankan server Next.js:
 ```bash
 npm run dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) in your browser.
+Buka [http://localhost:3000](http://localhost:3000) di browser.
 
----
-
-## Quantitative Evaluation
-
-The `backend/evaluation/` suite benchmarks retrieval accuracy, answer faithfulness (via LLM-as-a-Judge), and end-to-end latency.
-
-### Run the Evaluation Script
-Ensure PostgreSQL is running and at least one relevant PDF document is indexed:
+### 4. Menjalankan Ulang Evaluasi RAG
+Pastikan PostgreSQL aktif dan dokumen PDF sudah terindeks:
 ```bash
 cd backend
 python evaluation/eval_rag.py
 ```
-The script prints a summary table to the terminal and writes detailed per-query results to `backend/evaluation/eval_report.json`.
-
-### Evaluation Benchmark Results
-
-| Metric | Target | Measured Result | Notes |
-| :--- | :---: | :---: | :--- |
-| **Retrieval Hit Rate (Recall@5)** | >= 85.0% | *Run `eval_rag.py` to populate* | `expected_page` found in top-5 hybrid search results |
-| **Faithfulness Score (LLM-as-a-Judge)** | >= 0.90 | *Run `eval_rag.py` to populate* | 0.0 – 1.0 scale; checks strict grounding in retrieved chunks |
-| **Average End-to-End Latency** | <= 3.00s | *Run `eval_rag.py` to populate* | Includes query embedding, hybrid retrieval, and LLM generation |
 
 ---
 
-## Deployment Guide
+## Panduan Deployment
 
 ### Backend (Render / Railway / Hugging Face Spaces)
-The `backend/Dockerfile` uses `python:3.11-slim` with zero heavy PyTorch/GPU dependencies and binds dynamically to `${PORT:-8000}`:
+File `backend/Dockerfile` menggunakan base image ringan `python:3.11-slim` tanpa dependency PyTorch GPU dan mendukung port dinamis `${PORT:-8000}`:
 ```bash
 cd backend
 docker build -t enterprise-rag-backend .
 docker run -p 8000:8000 --env-file .env enterprise-rag-backend
 ```
-1. Provision a managed PostgreSQL database with `pgvector` enabled (e.g., **Supabase**, **Neon**, or **Railway Postgres**).
-2. Deploy `backend/` as a Docker Web Service and set `GROQ_API_KEY`, `GEMINI_API_KEY`, and `DATABASE_URL`.
+1. Siapkan database PostgreSQL dengan ekstensi `pgvector` aktif (misalnya **Supabase**, **Neon**, atau **Railway Postgres**).
+2. Deploy folder `backend/` sebagai Docker Web Service dan atur variabel `GROQ_API_KEY`, `GEMINI_API_KEY`, serta `DATABASE_URL`.
 
 ### Frontend (Vercel)
-1. Import the `frontend/` directory into **Vercel**.
-2. Set `NEXT_PUBLIC_API_URL` to your deployed backend URL (e.g., `https://your-backend.onrender.com/api/v1`).
+1. Hubungkan direktori `frontend/` ke **Vercel**.
+2. Atur environment variable `NEXT_PUBLIC_API_URL` ke URL backend yang sudah di-deploy (misal `https://your-backend.onrender.com/api/v1`).
 3. Deploy.
