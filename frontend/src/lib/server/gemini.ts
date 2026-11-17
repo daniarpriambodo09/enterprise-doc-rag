@@ -10,7 +10,7 @@ function getGeminiClient() {
 
 const EMBEDDING_MODEL = process.env.EMBEDDING_MODEL || "gemini-embedding-001";
 const MAX_INLINE_PDF_BYTES = 15 * 1024 * 1024; // 15 MB limit for inline multimodal ingestion
-const VISION_TIMEOUT_MS = 12_000; // Fast-fail 12 detik per model
+const VISION_TIMEOUT_MS = 15_000; // Fast-fail 15 detik per model
 
 export function isVisionUnavailableError(err: unknown): boolean {
   const msg = err instanceof Error ? err.message : String(err ?? "");
@@ -56,9 +56,7 @@ Pastikan seluruh halaman diekstrak tanpa melewatkan informasi penting.`;
     new Set(
       [
         process.env.VISION_MODEL,
-        "gemini-2.5-flash-lite",
-        "gemini-2.0-flash",
-        "gemini-3.8-flash-lite",
+        "gemini-3.5-flash-lite",
         "gemini-3.8-flash",
       ].filter((m): m is string => Boolean(m))
     )
@@ -67,7 +65,7 @@ Pastikan seluruh halaman diekstrak tanpa melewatkan informasi penting.`;
   let lastError: unknown = null;
   let rawJson: string | undefined;
 
-  // Fast-Fail: maksimal 1x percobaan per model dengan timeout 12 detik
+  // Fast-Fail: maksimal 1x percobaan per model dengan timeout 15 detik
   for (const modelName of visionModels) {
     try {
       const response = await ai.models.generateContent({
