@@ -1,11 +1,27 @@
 import { neon } from "@neondatabase/serverless";
 
+function sanitizeDatabaseUrl(rawUrl: string): string {
+  try {
+    const parsed = new URL(rawUrl);
+    if (parsed.searchParams.get("channel_binding") === "require") {
+      parsed.searchParams.delete("channel_binding");
+    }
+    return parsed.toString();
+  } catch {
+    return rawUrl
+      .replace(/([?&])channel_binding=require(&|$)/, (_match, p1, p2) =>
+        p2 === "&" ? p1 : ""
+      )
+      .replace(/[?&]$/, "");
+  }
+}
+
 export function getDb() {
   const databaseUrl = process.env.DATABASE_URL;
   if (!databaseUrl) {
     throw new Error("DATABASE_URL environment variable is not configured.");
   }
-  return neon(databaseUrl);
+  return neon(sanitizeDatabaseUrl(databaseUrl));
 }
 
 let schemaInitialized = false;

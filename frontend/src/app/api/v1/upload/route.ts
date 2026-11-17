@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { PDFParse } from "pdf-parse";
+import { extractText } from "unpdf";
 import { ensureSchema, getDb } from "@/lib/server/db";
 import { chunkPages } from "@/lib/server/chunker";
 import { getBatchEmbeddings } from "@/lib/server/gemini";
@@ -26,19 +26,13 @@ export async function POST(req: NextRequest) {
     }
 
     const arrayBuffer = await file.arrayBuffer();
-    const buffer = Buffer.from(arrayBuffer);
-
-    const parser = new PDFParse({ data: buffer });
-    let pages: { pageNumber: number; text: string }[] = [];
-    try {
-      const textResult = await parser.getText();
-      pages = textResult.pages.map((p) => ({
-        pageNumber: p.num,
-        text: p.text,
-      }));
-    } finally {
-      await parser.destroy();
-    }
+    const { text } = await extractText(new Uint8Array(arrayBuffer), {
+      mergePages: false,
+    });
+    const pages = text.map((pageText, idx) => ({
+      pageNumber: idx + 1,
+      text: pageText,
+    }));
 
     const chunks = chunkPages(pages, file.name, 800, 150);
     if (chunks.length === 0) {

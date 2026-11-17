@@ -1,7 +1,8 @@
-import { NextResponse } from "next/server";
+import { connection, NextResponse } from "next/server";
 import { ensureSchema, getDb } from "@/lib/server/db";
 
 export async function GET() {
+  await connection();
   try {
     await ensureSchema();
     const sql = getDb();
