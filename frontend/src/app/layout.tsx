@@ -13,9 +13,10 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "Enterprise Doc RAG — Intelligent Knowledge Workspace",
+  title: "Enterprise Doc RAG — Daniar Priambodo",
   description:
-    "Asisten analisis dokumen perusahaan berbasis Hybrid Search, pgvector, dan LLM dengan sitasi halaman akurat.",
+    "Asisten analisis dokumen perusahaan berbasis Hybrid Search, pgvector, dan LLM dengan sitasi halaman akurat. Portfolio by Daniar Priambodo.",
+  authors: [{ name: "Daniar Priambodo" }],
 };
 
 export default function RootLayout({ children }: LayoutProps<"/">) {

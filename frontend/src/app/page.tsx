@@ -261,7 +261,7 @@ export default function RagWorkspace() {
             </button>
           </form>
           <p className="max-w-4xl mx-auto text-center text-[11px] text-slate-500 mt-2">
-            Jawaban dihasilkan berdasarkan dokumen terindeks dengan sitasi halaman • Shift + Enter untuk baris baru
+            Enterprise Doc RAG oleh <span className="text-slate-300 font-medium">Daniar Priambodo</span> • Sitasi halaman otomatis • Shift + Enter untuk baris baru
           </p>
         </div>
       </main>

@@ -326,6 +326,11 @@ export default function Sidebar({
             </button>
           ))}
         </div>
+
+        <div className="mt-4 pt-3 border-t border-slate-800/60 flex items-center justify-between text-[11px] text-slate-500">
+          <span>Portfolio Project</span>
+          <span className="font-semibold text-slate-300">Daniar Priambodo</span>
+        </div>
       </div>
     </div>
   );
