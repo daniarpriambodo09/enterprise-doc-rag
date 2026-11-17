@@ -42,6 +42,7 @@ export default function RagWorkspace() {
   const [isLoadingChat, setIsLoadingChat] = useState(false);
   const [isLoadingSession, setIsLoadingSession] = useState(false);
   const [isUploading, setIsUploading] = useState(false);
+  const [uploadProgress, setUploadProgress] = useState<string | null>(null);
   const [deletingFilename, setDeletingFilename] = useState<string | null>(null);
   const [deletingSessionId, setDeletingSessionId] = useState<string | null>(null);
   const [uploadStatus, setUploadStatus] = useState<{
@@ -98,9 +99,12 @@ export default function RagWorkspace() {
     }
 
     setIsUploading(true);
+    setUploadProgress(null);
     setUploadStatus(null);
     try {
-      const res = await uploadDocument(file);
+      const res = await uploadDocument(file, (statusText) => {
+        setUploadProgress(statusText);
+      });
       const modeText =
         res.ingestion_mode === "multimodal"
           ? "Multimodal AI"
@@ -115,6 +119,7 @@ export default function RagWorkspace() {
       setUploadStatus({ type: "error", text: message });
     } finally {
       setIsUploading(false);
+      setUploadProgress(null);
     }
   };
 
@@ -260,6 +265,7 @@ export default function RagWorkspace() {
           sessions={sessions}
           activeSessionId={activeSessionId}
           isUploading={isUploading}
+          uploadProgress={uploadProgress}
           deletingFilename={deletingFilename}
           deletingSessionId={deletingSessionId}
           uploadStatus={uploadStatus}

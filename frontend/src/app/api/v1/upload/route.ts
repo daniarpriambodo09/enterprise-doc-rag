@@ -29,6 +29,14 @@ export async function POST(req: NextRequest) {
       );
     }
 
+    const pageOffsetRaw = formData.get("pageOffset");
+    const pageOffset = Math.max(
+      0,
+      Number.parseInt(String(pageOffsetRaw ?? "0"), 10) || 0
+    );
+    const isFirstBatchRaw = formData.get("isFirstBatch");
+    const isFirstBatch = String(isFirstBatchRaw ?? "true") !== "false";
+
     const arrayBuffer = await file.arrayBuffer();
     const buffer = Buffer.from(arrayBuffer);
 
@@ -53,6 +61,13 @@ export async function POST(req: NextRequest) {
       }));
     }
 
+    if (pageOffset > 0) {
+      pages = pages.map((p) => ({
+        ...p,
+        pageNumber: p.pageNumber + pageOffset,
+      }));
+    }
+
     const chunks = chunkPages(pages, file.name, 800, 150);
     if (chunks.length === 0) {
       return NextResponse.json(
@@ -73,13 +88,16 @@ export async function POST(req: NextRequest) {
     await ensureSchema();
     const sql = getDb();
 
-    // Anti-duplikasi: hapus chunk lama jika filename sudah ada
-    const deletedRows = await sql`
-      DELETE FROM document_chunks
-      WHERE filename = ${file.name}
-      RETURNING id;
-    `;
-    const overwrittenChunks = deletedRows.length;
+    // Anti-duplikasi: hanya hapus chunk lama pada batch pertama
+    let overwrittenChunks = 0;
+    if (isFirstBatch) {
+      const deletedRows = await sql`
+        DELETE FROM document_chunks
+        WHERE filename = ${file.name}
+        RETURNING id;
+      `;
+      overwrittenChunks = deletedRows.length;
+    }
 
     for (let i = 0; i < chunks.length; i++) {
       const chunk = chunks[i];

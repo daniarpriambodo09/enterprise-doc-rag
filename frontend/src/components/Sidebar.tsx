@@ -26,6 +26,7 @@ interface SidebarProps {
   sessions: ChatSessionItem[];
   activeSessionId: string | null;
   isUploading: boolean;
+  uploadProgress?: string | null;
   deletingFilename: string | null;
   deletingSessionId: string | null;
   uploadStatus: { type: "success" | "error"; text: string } | null;
@@ -68,6 +69,7 @@ export default function Sidebar({
   sessions,
   activeSessionId,
   isUploading,
+  uploadProgress,
   deletingFilename,
   deletingSessionId,
   uploadStatus,
@@ -283,7 +285,7 @@ export default function Sidebar({
               </div>
               <p className="text-xs font-medium text-slate-200">
                 {isUploading
-                  ? "Memproses Teks & Analisis Visual..."
+                  ? uploadProgress || "Memproses Teks & Analisis Visual..."
                   : "Unggah Dokumen PDF"}
               </p>
               <p className="text-[10px] text-slate-400 mt-1 flex items-center justify-center gap-1">

@@ -9,7 +9,7 @@ function getGeminiClient() {
 }
 
 const EMBEDDING_MODEL = process.env.EMBEDDING_MODEL || "gemini-embedding-001";
-const MULTIMODAL_MODEL = "gemini-2.5-flash";
+const MULTIMODAL_MODEL = process.env.VISION_MODEL || "gemini-3.8-flash";
 const MAX_INLINE_PDF_BYTES = 15 * 1024 * 1024; // 15 MB limit for inline multimodal ingestion
 
 export interface ExtractedPdfPage {
@@ -85,7 +85,7 @@ Pastikan seluruh halaman diekstrak tanpa melewatkan informasi penting.`;
 
   const rawJson = response.text;
   if (!rawJson) {
-    throw new Error("Respons kosong dari Gemini 2.5 Flash saat ekstraksi PDF.");
+    throw new Error(`Respons kosong dari ${MULTIMODAL_MODEL} saat ekstraksi PDF.`);
   }
 
   const parsed = JSON.parse(rawJson) as { pages?: GeminiMultimodalPage[] };

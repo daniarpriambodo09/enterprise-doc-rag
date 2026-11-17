@@ -1,4 +1,7 @@
+import { PDFDocument } from "pdf-lib";
+
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || "/api/v1";
+const MAX_UPLOAD_BATCH_BYTES = 3.5 * 1024 * 1024; // 3.5 MB (aman di bawah limit 4.5 MB Vercel)
 
 export interface SourceCitation {
     filename: string;
@@ -45,9 +48,16 @@ export async function fetchDocuments(): Promise<DocumentItem[]> {
     return res.json();
 }
 
-export async function uploadDocument(file: File) {
+async function postUploadBatch(
+    filePayload: Blob,
+    filename: string,
+    pageOffset: number,
+    isFirstBatch: boolean
+) {
     const formData = new FormData();
-    formData.append("file", file);
+    formData.append("file", filePayload, filename);
+    formData.append("pageOffset", String(pageOffset));
+    formData.append("isFirstBatch", isFirstBatch ? "true" : "false");
 
     const res = await fetch(`${API_BASE_URL}/upload`, {
         method: "POST",
@@ -59,6 +69,79 @@ export async function uploadDocument(file: File) {
         throw new Error(err.detail || "Gagal mengunggah file");
     }
     return res.json();
+}
+
+async function createSubPdfBytes(
+    sourceDoc: PDFDocument,
+    startIdx: number,
+    endIdx: number
+): Promise<Uint8Array> {
+    const subDoc = await PDFDocument.create();
+    const pageIndices = Array.from(
+        { length: endIdx - startIdx },
+        (_, i) => startIdx + i
+    );
+    const copiedPages = await subDoc.copyPages(sourceDoc, pageIndices);
+    for (const page of copiedPages) {
+        subDoc.addPage(page);
+    }
+    return subDoc.save();
+}
+
+export async function uploadDocument(
+    file: File,
+    onProgress?: (statusText: string) => void
+) {
+    if (file.size <= MAX_UPLOAD_BATCH_BYTES) {
+        return postUploadBatch(file, file.name, 0, true);
+    }
+
+    onProgress?.("Memecah PDF berukuran besar ke dalam beberapa batch...");
+    const sourceBuffer = await file.arrayBuffer();
+    const sourceDoc = await PDFDocument.load(sourceBuffer);
+    const totalPages = sourceDoc.getPageCount();
+
+    let totalChunks = 0;
+    let lastIngestionMode: string = "multimodal";
+    let isFirst = true;
+    let cursor = 0;
+
+    while (cursor < totalPages) {
+        let batchEnd = Math.min(cursor + 2, totalPages);
+        let subBytes = await createSubPdfBytes(sourceDoc, cursor, batchEnd);
+
+        // Jika 2 halaman masih > 3.5 MB, turunkan ke 1 halaman per batch
+        if (subBytes.byteLength > MAX_UPLOAD_BATCH_BYTES && batchEnd - cursor > 1) {
+            batchEnd = cursor + 1;
+            subBytes = await createSubPdfBytes(sourceDoc, cursor, batchEnd);
+        }
+
+        if (subBytes.byteLength > 4.4 * 1024 * 1024) {
+            throw new Error(
+                `Halaman ${cursor + 1} terlalu besar (${(subBytes.byteLength / (1024 * 1024)).toFixed(1)} MB) untuk batas request 4.5 MB Vercel.`
+            );
+        }
+
+        onProgress?.(`Memproses halaman ${cursor + 1}–${batchEnd} dari ${totalPages}...`);
+        const batchArrayBuffer = subBytes.slice().buffer;
+        const batchBlob = new Blob([batchArrayBuffer], { type: "application/pdf" });
+        const res = await postUploadBatch(batchBlob, file.name, cursor, isFirst);
+
+        totalChunks += Number(res.total_chunks) || 0;
+        if (res.ingestion_mode) {
+            lastIngestionMode = res.ingestion_mode;
+        }
+        isFirst = false;
+        cursor = batchEnd;
+    }
+
+    return {
+        status: "success",
+        filename: file.name,
+        total_chunks: totalChunks,
+        ingestion_mode: lastIngestionMode,
+        message: `${file.name} berhasil diproses (${totalChunks} chunks dari ${totalPages} halaman).`,
+    };
 }
 
 export async function sendChatQuery(
