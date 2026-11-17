@@ -1,0 +1,155 @@
+{
+  "summary": {
+    "total_queries": 8,
+    "retrieval_hit_rate_recall_at_5": 1.0,
+    "retrieval_hit_percentage": "100.0%",
+    "average_faithfulness_score": 0.75,
+    "average_latency_seconds": 9.745
+  },
+  "details": [
+    {
+      "id": "Q1",
+      "category": "Technical Skills Extraction",
+      "question": "Apa saja daftar Technical Skills atau teknologi yang dikuasai oleh Daniar Priambodo berdasarkan dokumen CV?",
+      "expected_page": 1,
+      "retrieved_pages": [
+        1,
+        1,
+        1,
+        1,
+        1
+      ],
+      "retrieval_hit": true,
+      "faithfulness_score": 0.0,
+      "judge_reason": "Judge error: Error code: 400 - {'error': {'message': \"Failed to validate JSON. Please adjust your prompt. See 'failed_generation' for more details.\", 'type': 'invalid_request_error', 'code': 'json_validate_failed', 'failed_generation': ''}}",
+      "latency_sec": 1.763,
+      "answer_preview": "Daftar **Technical Skills** (teknologi) yang dikuasai oleh Daniar Priambodo, sebagaimana tercantum dalam dokumen CV, adalah:\n\n| **Kategori** | **Teknologi / Alat** |\n|--------------|------------------..."
+    },
+    {
+      "id": "Q2",
+      "category": "Internship Experience",
+      "question": "Jelaskan peran, periode kerja, dan pencapaian teknis Daniar Priambodo selama magang di PT. Jatim Autocomp Indonesia.",
+      "expected_page": 1,
+      "retrieved_pages": [
+        1,
+        1,
+        1,
+        1,
+        1
+      ],
+      "retrieval_hit": true,
+      "faithfulness_score": 1.0,
+      "judge_reason": "All factual claims in the answer are directly supported by the retrieved context.",
+      "latency_sec": 1.424,
+      "answer_preview": "**Peran, periode kerja, dan pencapaian teknis Daniar Priambodo selama magang di PT. Jatim Autocomp Indonesia**\n\n| Aspek | Rincian | Sumber |\n|-------|---------|--------|\n| **Peran** | Full Stack Web D..."
+    },
+    {
+      "id": "Q3",
+      "category": "Project Detail (E-Checksheet)",
+      "question": "Apa fungsi aplikasi QA E-Checksheet dan perangkat keras apa yang digunakan dalam proyek tersebut?",
+      "expected_page": 1,
+      "retrieved_pages": [
+        1,
+        1,
+        1,
+        1,
+        1
+      ],
+      "retrieval_hit": true,
+      "faithfulness_score": 1.0,
+      "judge_reason": "All factual claims are directly supported by the retrieved context.",
+      "latency_sec": 13.829,
+      "answer_preview": "Aplikasi QA E‑Checksheet dirancang sebagai **aplikasi pengujian kualitas (Quality Assurance) di lantai produksi**.  \nPerangkat keras yang digunakan dalam proyek tersebut adalah **scanner handheld Zebr..."
+    },
+    {
+      "id": "Q4",
+      "category": "Project Detail (Culturace 2026)",
+      "question": "Berapa jumlah item anggaran (RAB), total nilai anggaran, dan target peserta pada proyek Culturace 2026?",
+      "expected_page": 1,
+      "retrieved_pages": [
+        1,
+        1,
+        1,
+        1,
+        1
+      ],
+      "retrieval_hit": true,
+      "faithfulness_score": 1.0,
+      "judge_reason": "All facts in the answer are directly supported by the retrieved context.",
+      "latency_sec": 11.632,
+      "answer_preview": "Jumlah item anggaran (RAB), total nilai anggaran, dan target peserta pada proyek **Culturace 2026** adalah sebagai berikut:\n\n| Item | Nilai |\n|------|-------|\n| Jumlah item anggaran (RAB) | 16 item |\n..."
+    },
+    {
+      "id": "Q5",
+      "category": "Project Detail (Crypto Trading Bot)",
+      "question": "Jelaskan detail proyek Crypto Trading Bot yang tercantum dalam CV Daniar Priambodo.",
+      "expected_page": 1,
+      "retrieved_pages": [
+        1,
+        1,
+        1,
+        1,
+        1
+      ],
+      "retrieval_hit": true,
+      "faithfulness_score": 0.0,
+      "judge_reason": "Judge error: Error code: 400 - {'error': {'message': \"Failed to validate JSON. Please adjust your prompt. See 'failed_generation' for more details.\", 'type': 'invalid_request_error', 'code': 'json_validate_failed', 'failed_generation': ''}}",
+      "latency_sec": 10.742,
+      "answer_preview": "**Proyek Crypto Trading Bot (Personal Project, in progress)**  \n- **Periode pengerjaan**: November 2026 – saat ini.  \n- **Tujuan**: Membangun platform berbasis webhook yang dapat memvalidasi sinyal pe..."
+    },
+    {
+      "id": "Q6",
+      "category": "AI & ML Projects (Beyond AI & Langit.in)",
+      "question": "Bandingkan metode dan metrik evaluasi yang digunakan pada proyek Beyond AI dan sistem prediksi iklim Langit.in.",
+      "expected_page": 1,
+      "retrieved_pages": [
+        1,
+        1,
+        1,
+        1,
+        1
+      ],
+      "retrieval_hit": true,
+      "faithfulness_score": 1.0,
+      "judge_reason": "All factual claims in the answer are directly supported by the retrieved context.",
+      "latency_sec": 10.544,
+      "answer_preview": "**Perbandingan Metode dan Metrik Evaluasi**\n\n| Proyek | Metode Evaluasi | Metrik Evaluasi | Keterangan |\n|--------|-----------------|-----------------|------------|\n| **Beyond AI: Clinical Conversatio..."
+    },
+    {
+      "id": "Q7",
+      "category": "Guardrail / Out-of-Context",
+      "question": "Berapa nominal gaji pokok dan tunjangan transportasi yang diterima Daniar Priambodo saat magang di PT. Jatim Autocomp Indonesia?",
+      "expected_page": 1,
+      "retrieved_pages": [
+        1,
+        1,
+        1,
+        1,
+        1
+      ],
+      "retrieval_hit": true,
+      "faithfulness_score": 1.0,
+      "judge_reason": "The answer correctly refuses to provide information not present in the context, avoiding hallucination.",
+      "latency_sec": 13.621,
+      "answer_preview": "Maaf, informasi tersebut tidak ditemukan dalam dokumen yang tersedia."
+    },
+    {
+      "id": "Q8",
+      "category": "Guardrail / Out-of-Context",
+      "question": "Apakah dalam dokumen dijelaskan prosedur pengajuan cuti tahunan karyawan dan batas maksimal klaim asuransi kesehatan?",
+      "expected_page": 1,
+      "retrieved_pages": [
+        1,
+        1,
+        1,
+        1,
+        1
+      ],
+      "retrieval_hit": true,
+      "faithfulness_score": 1.0,
+      "judge_reason": "The answer correctly refused to provide information not present in the retrieved context.",
+      "latency_sec": 14.405,
+      "answer_preview": "Maaf, informasi tersebut tidak ditemukan dalam dokumen yang tersedia."
+    }
+  ]
+}

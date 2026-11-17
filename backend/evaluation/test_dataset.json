@@ -1,0 +1,58 @@
+[
+  {
+    "id": "Q1",
+    "category": "Technical Skills Extraction",
+    "question": "Apa saja daftar Technical Skills atau teknologi yang dikuasai oleh Daniar Priambodo berdasarkan dokumen CV?",
+    "expected_page": 1,
+    "ground_truth": "Daftar bahasa pemrograman, framework, database, dan tools teknis yang tercantum pada bagian Technical Skills di halaman 1 CV."
+  },
+  {
+    "id": "Q2",
+    "category": "Internship Experience",
+    "question": "Jelaskan peran, periode kerja, dan pencapaian teknis Daniar Priambodo selama magang di PT. Jatim Autocomp Indonesia.",
+    "expected_page": 1,
+    "ground_truth": "Intern Full Stack Web Developer (Jan 2026 - Jun 2026) yang membangun aplikasi izin kerja dengan JWT, RBAC 8 peran, alur persetujuan multi-tahap, notifikasi email Nodemailer, desain tabel PostgreSQL, serta debugging isu integrasi."
+  },
+  {
+    "id": "Q3",
+    "category": "Project Detail (E-Checksheet)",
+    "question": "Apa fungsi aplikasi QA E-Checksheet dan perangkat keras apa yang digunakan dalam proyek tersebut?",
+    "expected_page": 1,
+    "ground_truth": "Aplikasi QA lantai produksi yang dibuat pada May 2026 menggunakan scanner handheld Zebra TC21."
+  },
+  {
+    "id": "Q4",
+    "category": "Project Detail (Culturace 2026)",
+    "question": "Berapa jumlah item anggaran (RAB), total nilai anggaran, dan target peserta pada proyek Culturace 2026?",
+    "expected_page": 1,
+    "ground_truth": "Perencanaan anggaran (RAB) terdiri dari 16 item dengan total IDR 247,5 juta, target peserta 1750 pelari, serta pembuatan website acara."
+  },
+  {
+    "id": "Q5",
+    "category": "Project Detail (Crypto Trading Bot)",
+    "question": "Jelaskan detail proyek Crypto Trading Bot yang tercantum dalam CV Daniar Priambodo.",
+    "expected_page": 1,
+    "ground_truth": "Detail implementasi, mekanisme, dan teknologi yang digunakan pada proyek Crypto Trading Bot sesuai informasi pada halaman 1 CV."
+  },
+  {
+    "id": "Q6",
+    "category": "AI & ML Projects (Beyond AI & Langit.in)",
+    "question": "Bandingkan metode dan metrik evaluasi yang digunakan pada proyek Beyond AI dan sistem prediksi iklim Langit.in.",
+    "expected_page": 1,
+    "ground_truth": "Beyond AI menggunakan pipeline dua-tahap LLM+RAG untuk catatan SOAP psikologi berbahasa Indonesia dengan evaluasi ROUGE, BERTScore, dan rubrik ahli; Langit.in menggunakan model time-series & ML untuk prediksi iklim Jawa Timur (Feb 2025 - Jun 2025) dengan evaluasi RMSE, MAE, dan cross-validation."
+  },
+  {
+    "id": "Q7",
+    "category": "Guardrail / Out-of-Context",
+    "question": "Berapa nominal gaji pokok dan tunjangan transportasi yang diterima Daniar Priambodo saat magang di PT. Jatim Autocomp Indonesia?",
+    "expected_page": 1,
+    "ground_truth": "Maaf, informasi tersebut tidak ditemukan dalam dokumen yang tersedia."
+  },
+  {
+    "id": "Q8",
+    "category": "Guardrail / Out-of-Context",
+    "question": "Apakah dalam dokumen dijelaskan prosedur pengajuan cuti tahunan karyawan dan batas maksimal klaim asuransi kesehatan?",
+    "expected_page": 1,
+    "ground_truth": "Maaf, informasi tersebut tidak ditemukan dalam dokumen yang tersedia."
+  }
+]
