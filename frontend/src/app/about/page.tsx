@@ -11,6 +11,7 @@ import {
   Sparkles,
   UserCheck,
 } from "lucide-react";
+import ThemeToggle from "../../components/ThemeToggle";
 
 export const metadata: Metadata = {
   title: "Tentang TanyaDoc — Enterprise Document RAG by Daniar Priambodo",
@@ -46,46 +47,63 @@ const PIPELINE_STEPS = [
 ];
 
 const TECH_STACK = [
-  { label: "Frontend & API", value: "Next.js 16 (App Router), React 19, TypeScript, Tailwind CSS v4" },
-  { label: "Vector Database", value: "Neon PostgreSQL + pgvector (HNSW Cosine Index)" },
-  { label: "Embeddings & Vision", value: "Google Gemini (gemini-embedding-001 & Gemini Vision)" },
-  { label: "LLM & Fallback OCR", value: "Groq Inference API, unpdf, pdf-lib, pdfjs-dist, Tesseract.js" },
+  {
+    label: "Frontend & API",
+    value: "Next.js 16 (App Router), React 19, TypeScript, Tailwind CSS v4",
+  },
+  {
+    label: "Vector Database",
+    value: "Neon PostgreSQL + pgvector (HNSW Cosine Index)",
+  },
+  {
+    label: "Embeddings & Vision",
+    value: "Google Gemini (gemini-embedding-001 & Gemini Vision)",
+  },
+  {
+    label: "LLM & Fallback OCR",
+    value: "Groq Inference API, unpdf, pdf-lib, pdfjs-dist, Tesseract.js",
+  },
 ];
 
 export default function AboutPage() {
   return (
-    <div className="min-h-screen bg-slate-950 text-slate-100 bg-grid-pattern">
+    <div className="min-h-screen bg-slate-50 text-slate-900 dark:bg-slate-950 dark:text-slate-100 bg-grid-pattern transition-colors">
       {/* Top Navigation */}
-      <header className="h-14 border-b border-slate-800/80 px-4 sm:px-8 flex items-center justify-between bg-slate-950/80 backdrop-blur-md sticky top-0 z-20">
+      <header className="h-14 border-b border-slate-200 dark:border-slate-800/80 px-4 sm:px-8 flex items-center justify-between bg-white/80 dark:bg-slate-950/80 backdrop-blur-md sticky top-0 z-20 transition-colors">
         <Link
           href="/"
-          className="inline-flex items-center gap-2 text-xs font-medium text-slate-300 hover:text-white transition"
+          className="inline-flex items-center gap-2 text-xs font-medium text-slate-600 hover:text-slate-950 dark:text-slate-300 dark:hover:text-white transition"
         >
           <ArrowLeft className="w-4 h-4" />
           <span>Kembali ke Workspace</span>
         </Link>
 
-        <span className="text-xs text-slate-400 font-medium">
-          tanyadoc.my.id
-        </span>
+        <div className="flex items-center gap-3">
+          <span className="text-xs text-slate-500 dark:text-slate-400 font-medium">
+            tanyadoc.my.id
+          </span>
+          <ThemeToggle />
+        </div>
       </header>
 
       <main className="max-w-4xl mx-auto px-4 sm:px-8 py-12 space-y-12">
         {/* Hero / Intro */}
         <section className="space-y-4">
-          <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-slate-900 border border-slate-800 text-xs text-slate-300">
-            <BookOpen className="w-3.5 h-3.5 text-indigo-400" />
+          <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-white border border-slate-200 text-slate-700 dark:bg-slate-900 dark:border-slate-800 text-xs dark:text-slate-300 shadow-sm">
+            <BookOpen className="w-3.5 h-3.5 text-indigo-600 dark:text-indigo-400" />
             <span>Enterprise Document RAG Workspace</span>
           </div>
 
-          <h1 className="text-3xl sm:text-4xl font-bold tracking-tight text-white">
+          <h1 className="text-3xl sm:text-4xl font-bold tracking-tight text-slate-900 dark:text-white">
             Tentang TanyaDoc
           </h1>
 
-          <p className="text-sm sm:text-base text-slate-400 leading-relaxed max-w-2xl">
-            <strong className="text-slate-200">TanyaDoc</strong> adalah sistem
-            analisis dokumen perusahaan berbasis{" "}
-            <strong className="text-slate-200">
+          <p className="text-sm sm:text-base text-slate-600 dark:text-slate-400 leading-relaxed max-w-2xl">
+            <strong className="text-slate-900 dark:text-slate-200">
+              TanyaDoc
+            </strong>{" "}
+            adalah sistem analisis dokumen perusahaan berbasis{" "}
+            <strong className="text-slate-900 dark:text-slate-200">
               Retrieval-Augmented Generation (RAG)
             </strong>{" "}
             yang dirancang untuk membaca dokumen PDF kompleks—mulai dari SOP,
@@ -97,7 +115,7 @@ export default function AboutPage() {
 
         {/* How It Works */}
         <section className="space-y-4">
-          <h2 className="text-sm font-semibold uppercase tracking-wider text-slate-400">
+          <h2 className="text-sm font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400">
             Arsitektur & Cara Kerja
           </h2>
 
@@ -107,20 +125,20 @@ export default function AboutPage() {
               return (
                 <div
                   key={item.step}
-                  className="p-5 rounded-2xl bg-slate-900/70 border border-slate-800/90 space-y-2.5"
+                  className="p-5 rounded-2xl bg-white dark:bg-slate-900/70 border border-slate-200 dark:border-slate-800/90 space-y-2.5 shadow-sm dark:shadow-none"
                 >
                   <div className="flex items-center justify-between">
-                    <div className="w-8 h-8 rounded-lg bg-slate-800 border border-slate-700/80 flex items-center justify-center text-indigo-400">
+                    <div className="w-8 h-8 rounded-lg bg-slate-100 border border-slate-200 text-indigo-600 dark:bg-slate-800 dark:border-slate-700/80 flex items-center justify-center dark:text-indigo-400">
                       <Icon className="w-4 h-4" />
                     </div>
-                    <span className="text-xs font-mono text-slate-500">
+                    <span className="text-xs font-mono text-slate-400 dark:text-slate-500">
                       {item.step}
                     </span>
                   </div>
-                  <h3 className="text-sm font-semibold text-slate-100">
+                  <h3 className="text-sm font-semibold text-slate-900 dark:text-slate-100">
                     {item.title}
                   </h3>
-                  <p className="text-xs text-slate-400 leading-relaxed">
+                  <p className="text-xs text-slate-600 dark:text-slate-400 leading-relaxed">
                     {item.desc}
                   </p>
                 </div>
@@ -131,21 +149,21 @@ export default function AboutPage() {
 
         {/* Tech Stack */}
         <section className="space-y-4">
-          <h2 className="text-sm font-semibold uppercase tracking-wider text-slate-400 flex items-center gap-2">
-            <Cpu className="w-4 h-4 text-slate-500" />
+          <h2 className="text-sm font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400 flex items-center gap-2">
+            <Cpu className="w-4 h-4 text-slate-400 dark:text-slate-500" />
             <span>Teknologi yang Digunakan</span>
           </h2>
 
-          <div className="rounded-2xl border border-slate-800/90 bg-slate-900/60 divide-y divide-slate-800/80">
+          <div className="rounded-2xl border border-slate-200 dark:border-slate-800/90 bg-white dark:bg-slate-900/60 divide-y divide-slate-200 dark:divide-slate-800/80 shadow-sm dark:shadow-none">
             {TECH_STACK.map((row) => (
               <div
                 key={row.label}
                 className="px-5 py-3.5 flex flex-col sm:flex-row sm:items-center justify-between gap-1 sm:gap-4"
               >
-                <span className="text-xs font-medium text-slate-400">
+                <span className="text-xs font-medium text-slate-500 dark:text-slate-400">
                   {row.label}
                 </span>
-                <span className="text-xs sm:text-sm text-slate-200 font-medium">
+                <span className="text-xs sm:text-sm text-slate-800 dark:text-slate-200 font-medium">
                   {row.value}
                 </span>
               </div>
@@ -154,14 +172,16 @@ export default function AboutPage() {
         </section>
 
         {/* Creator / Author Card */}
-        <section className="p-6 rounded-2xl bg-slate-900/80 border border-slate-800 flex flex-col sm:flex-row sm:items-center justify-between gap-6">
+        <section className="p-6 rounded-2xl bg-white dark:bg-slate-900/80 border border-slate-200 dark:border-slate-800 flex flex-col sm:flex-row sm:items-center justify-between gap-6 shadow-sm dark:shadow-none">
           <div className="space-y-2">
-            <div className="inline-flex items-center gap-1.5 text-xs font-medium text-emerald-400">
+            <div className="inline-flex items-center gap-1.5 text-xs font-medium text-emerald-600 dark:text-emerald-400">
               <UserCheck className="w-3.5 h-3.5" />
               <span>Dikembangkan Oleh</span>
             </div>
-            <h2 className="text-lg font-bold text-white">Daniar Priambodo</h2>
-            <p className="text-xs sm:text-sm text-slate-400 max-w-xl leading-relaxed">
+            <h2 className="text-lg font-bold text-slate-900 dark:text-white">
+              Daniar Priambodo
+            </h2>
+            <p className="text-xs sm:text-sm text-slate-600 dark:text-slate-400 max-w-xl leading-relaxed">
               Backend &amp; AI/ML Engineer — Mahasiswa S1 Ilmu Data Terapan di
               Politeknik Elektronika Negeri Surabaya (PENS). Berfokus pada
               pengembangan sistem RAG, pipeline LLM, dan arsitektur backend
@@ -171,7 +191,7 @@ export default function AboutPage() {
 
           <Link
             href="/"
-            className="inline-flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl bg-slate-100 hover:bg-white text-slate-950 text-xs font-semibold shrink-0 transition"
+            className="inline-flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl bg-slate-900 hover:bg-slate-800 text-white dark:bg-slate-100 dark:hover:bg-white dark:text-slate-950 text-xs font-semibold shrink-0 transition"
           >
             <Sparkles className="w-3.5 h-3.5" />
             <span>Coba TanyaDoc</span>

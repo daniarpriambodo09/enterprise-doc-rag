@@ -129,12 +129,12 @@ export default function Sidebar({
   };
 
   const sidebarContent = (
-    <div className="w-[300px] h-full border-r border-slate-800/90 bg-slate-950 flex flex-col">
+    <div className="w-[300px] h-full border-r border-slate-200 dark:border-slate-800/90 bg-white dark:bg-slate-950 flex flex-col transition-colors">
       {/* Top Bar: Brand + New Chat */}
-      <div className="px-4 pt-4 pb-3 border-b border-slate-800/70">
+      <div className="px-4 pt-4 pb-3 border-b border-slate-200 dark:border-slate-800/70">
         <div className="flex items-center justify-between gap-2 mb-3">
           <div className="min-w-0">
-            <h1 className="font-semibold text-sm text-slate-100 tracking-tight truncate">
+            <h1 className="font-semibold text-sm text-slate-900 dark:text-slate-100 tracking-tight truncate">
               Enterprise Doc RAG
             </h1>
             <p className="text-[11px] text-slate-500 truncate">
@@ -148,7 +148,7 @@ export default function Sidebar({
                 onNewChat();
                 onCloseMobile();
               }}
-              className="inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg bg-slate-100 hover:bg-white text-slate-950 text-xs font-medium transition cursor-pointer"
+              className="inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg bg-slate-900 hover:bg-slate-800 text-white dark:bg-slate-100 dark:hover:bg-white dark:text-slate-950 text-xs font-medium transition cursor-pointer"
             >
               <Plus className="w-3.5 h-3.5" />
               <span>Chat Baru</span>
@@ -156,7 +156,7 @@ export default function Sidebar({
             <button
               type="button"
               onClick={onCloseMobile}
-              className="lg:hidden p-1.5 rounded-lg text-slate-400 hover:text-white hover:bg-slate-800 transition cursor-pointer"
+              className="lg:hidden p-1.5 rounded-lg text-slate-500 hover:text-slate-900 hover:bg-slate-100 dark:text-slate-400 dark:hover:text-white dark:hover:bg-slate-800 transition cursor-pointer"
               aria-label="Tutup sidebar"
             >
               <X className="w-4 h-4" />
@@ -165,15 +165,14 @@ export default function Sidebar({
         </div>
 
         {/* Minimalist Tabs */}
-        <div className="grid grid-cols-2 gap-1 p-0.5 rounded-lg bg-slate-900 border border-slate-800/80">
+        <div className="grid grid-cols-2 gap-1 p-0.5 rounded-lg bg-slate-100 border border-slate-200 dark:bg-slate-900 dark:border-slate-800/80">
           <button
             type="button"
             onClick={() => setActiveTab("history")}
-            className={`flex items-center justify-center gap-1.5 py-1.5 px-2 rounded-md text-xs font-medium transition cursor-pointer ${
-              activeTab === "history"
-                ? "bg-slate-800 text-slate-100"
-                : "text-slate-400 hover:text-slate-200"
-            }`}
+            className={`flex items-center justify-center gap-1.5 py-1.5 px-2 rounded-md text-xs font-medium transition cursor-pointer ${activeTab === "history"
+                ? "bg-white text-slate-900 shadow-sm dark:bg-slate-800 dark:text-slate-100"
+                : "text-slate-600 hover:text-slate-900 dark:text-slate-400 dark:hover:text-slate-200"
+              }`}
           >
             <MessageSquare className="w-3.5 h-3.5" />
             <span>Riwayat ({sessions.length})</span>
@@ -181,11 +180,10 @@ export default function Sidebar({
           <button
             type="button"
             onClick={() => setActiveTab("documents")}
-            className={`flex items-center justify-center gap-1.5 py-1.5 px-2 rounded-md text-xs font-medium transition cursor-pointer ${
-              activeTab === "documents"
-                ? "bg-slate-800 text-slate-100"
-                : "text-slate-400 hover:text-slate-200"
-            }`}
+            className={`flex items-center justify-center gap-1.5 py-1.5 px-2 rounded-md text-xs font-medium transition cursor-pointer ${activeTab === "documents"
+                ? "bg-white text-slate-900 shadow-sm dark:bg-slate-800 dark:text-slate-100"
+                : "text-slate-600 hover:text-slate-900 dark:text-slate-400 dark:hover:text-slate-200"
+              }`}
           >
             <FolderOpen className="w-3.5 h-3.5" />
             <span>Dokumen ({documents.length})</span>
@@ -214,11 +212,10 @@ export default function Sidebar({
                         onSelectSession(session.id);
                         onCloseMobile();
                       }}
-                      className={`group flex items-center justify-between gap-2 px-2.5 py-2 rounded-lg transition cursor-pointer ${
-                        isActive
-                          ? "bg-slate-800/90 text-white border border-slate-700/80"
-                          : "hover:bg-slate-900 text-slate-300 border border-transparent"
-                      }`}
+                      className={`group flex items-center justify-between gap-2 px-2.5 py-2 rounded-lg transition cursor-pointer ${isActive
+                          ? "bg-slate-100 text-slate-900 border border-slate-300 dark:bg-slate-800/90 dark:text-white dark:border-slate-700/80"
+                          : "hover:bg-slate-100/70 text-slate-700 dark:hover:bg-slate-900 dark:text-slate-300 border border-transparent"
+                        }`}
                     >
                       <div className="min-w-0 flex-1">
                         <p
@@ -233,7 +230,7 @@ export default function Sidebar({
                       </div>
 
                       {isDeleting ? (
-                        <Loader2 className="w-3.5 h-3.5 text-rose-400 animate-spin shrink-0" />
+                        <Loader2 className="w-3.5 h-3.5 text-rose-500 dark:text-rose-400 animate-spin shrink-0" />
                       ) : (
                         <button
                           type="button"
@@ -241,7 +238,7 @@ export default function Sidebar({
                             e.stopPropagation();
                             onDeleteSession(session.id);
                           }}
-                          className="p-1 rounded text-slate-500 hover:text-rose-400 hover:bg-rose-500/10 opacity-0 group-hover:opacity-100 focus:opacity-100 transition shrink-0 cursor-pointer"
+                          className="p-1 rounded text-slate-400 hover:text-rose-600 hover:bg-rose-50 dark:text-slate-500 dark:hover:text-rose-400 dark:hover:bg-rose-500/10 opacity-0 group-hover:opacity-100 focus:opacity-100 transition shrink-0 cursor-pointer"
                           title="Hapus sesi"
                         >
                           <Trash2 className="w-3.5 h-3.5" />
@@ -270,21 +267,20 @@ export default function Sidebar({
               onDragLeave={handleDragLeave}
               onDrop={handleDrop}
               onClick={() => !isUploading && fileInputRef.current?.click()}
-              className={`flex items-center gap-2.5 px-3 py-2.5 rounded-lg border border-dashed transition cursor-pointer ${
-                isDragging
-                  ? "border-indigo-400 bg-indigo-500/10"
-                  : "border-slate-700/80 hover:border-slate-500 bg-slate-900/60 hover:bg-slate-900"
-              } ${isUploading ? "opacity-80 pointer-events-none" : ""}`}
+              className={`flex items-center gap-2.5 px-3 py-2.5 rounded-lg border border-dashed transition cursor-pointer ${isDragging
+                  ? "border-indigo-500 bg-indigo-50 dark:border-indigo-400 dark:bg-indigo-500/10"
+                  : "border-slate-300 hover:border-slate-400 bg-slate-50 hover:bg-slate-100/80 dark:border-slate-700/80 dark:hover:border-slate-500 dark:bg-slate-900/60 dark:hover:bg-slate-900"
+                } ${isUploading ? "opacity-80 pointer-events-none" : ""}`}
             >
-              <div className="w-7 h-7 rounded-md bg-slate-800 border border-slate-700 flex items-center justify-center text-slate-300 shrink-0">
+              <div className="w-7 h-7 rounded-md bg-white border border-slate-200 text-slate-600 dark:bg-slate-800 dark:border-slate-700 flex items-center justify-center dark:text-slate-300 shrink-0">
                 {isUploading ? (
-                  <Loader2 className="w-3.5 h-3.5 animate-spin text-indigo-400" />
+                  <Loader2 className="w-3.5 h-3.5 animate-spin text-indigo-600 dark:text-indigo-400" />
                 ) : (
                   <Upload className="w-3.5 h-3.5" />
                 )}
               </div>
               <div className="min-w-0 flex-1">
-                <p className="text-xs font-medium text-slate-200 truncate">
+                <p className="text-xs font-medium text-slate-800 dark:text-slate-200 truncate">
                   {isUploading
                     ? uploadProgress || "Memproses PDF..."
                     : "Unggah Dokumen PDF"}
@@ -299,11 +295,10 @@ export default function Sidebar({
 
             {uploadStatus && !dismissedStatus && (
               <div
-                className={`mt-2 px-2.5 py-2 rounded-lg text-[11px] flex items-start gap-2 ${
-                  uploadStatus.type === "success"
-                    ? "bg-emerald-950/60 text-emerald-300 border border-emerald-800/50"
-                    : "bg-rose-950/60 text-rose-300 border border-rose-800/50"
-                }`}
+                className={`mt-2 px-2.5 py-2 rounded-lg text-[11px] flex items-start gap-2 ${uploadStatus.type === "success"
+                    ? "bg-emerald-50 text-emerald-800 border border-emerald-200 dark:bg-emerald-950/60 dark:text-emerald-300 dark:border-emerald-800/50"
+                    : "bg-rose-50 text-rose-800 border border-rose-200 dark:bg-rose-950/60 dark:text-rose-300 dark:border-rose-800/50"
+                  }`}
               >
                 {uploadStatus.type === "success" ? (
                   <CheckCircle2 className="w-3.5 h-3.5 shrink-0 mt-0.5" />
@@ -327,19 +322,19 @@ export default function Sidebar({
 
           {/* Search Input */}
           <div className="relative">
-            <Search className="w-3.5 h-3.5 text-slate-500 absolute left-2.5 top-1/2 -translate-y-1/2" />
+            <Search className="w-3.5 h-3.5 text-slate-400 dark:text-slate-500 absolute left-2.5 top-1/2 -translate-y-1/2" />
             <input
               type="text"
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               placeholder="Cari dokumen..."
-              className="w-full bg-slate-900 border border-slate-800 rounded-lg pl-8 pr-3 py-1.5 text-xs text-slate-200 placeholder-slate-500 focus:outline-none focus:border-slate-600 transition"
+              className="w-full bg-slate-50 border border-slate-200 text-slate-800 placeholder-slate-400 focus:border-slate-400 dark:bg-slate-900 dark:border-slate-800 rounded-lg pl-8 pr-3 py-1.5 text-xs dark:text-slate-200 dark:placeholder-slate-500 focus:outline-none dark:focus:border-slate-600 transition"
             />
           </div>
 
           {/* Section Header with Inline Stats & Admin Lock */}
           <div className="flex items-center justify-between px-1 pt-0.5">
-            <span className="text-[11px] font-medium text-slate-400">
+            <span className="text-[11px] font-medium text-slate-500 dark:text-slate-400">
               Terindeks ({filteredDocs.length})
             </span>
             <div className="flex items-center gap-2">
@@ -354,11 +349,10 @@ export default function Sidebar({
                     ? "Admin Mode Aktif (Klik untuk ubah/hapus passcode)"
                     : "Admin Mode (Masukkan passcode untuk upload/hapus)"
                 }
-                className={`inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] font-medium border transition cursor-pointer ${
-                  hasAdminPasscode
-                    ? "bg-emerald-950/60 text-emerald-300 border-emerald-800/60"
-                    : "bg-slate-900 text-slate-400 hover:text-slate-200 border-slate-800"
-                }`}
+                className={`inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] font-medium border transition cursor-pointer ${hasAdminPasscode
+                    ? "bg-emerald-50 text-emerald-700 border-emerald-200 dark:bg-emerald-950/60 dark:text-emerald-300 dark:border-emerald-800/60"
+                    : "bg-slate-100 text-slate-600 hover:text-slate-900 border-slate-200 dark:bg-slate-900 dark:text-slate-400 dark:hover:text-slate-200 dark:border-slate-800"
+                  }`}
               >
                 {hasAdminPasscode ? (
                   <Unlock className="w-2.5 h-2.5" />
@@ -389,21 +383,21 @@ export default function Sidebar({
                   return (
                     <li
                       key={`${doc.filename}-${idx}`}
-                      className="px-2.5 py-2 rounded-lg hover:bg-slate-900/90 border border-transparent hover:border-slate-800 transition group"
+                      className="px-2.5 py-2 rounded-lg hover:bg-slate-100/80 border border-transparent hover:border-slate-200 dark:hover:bg-slate-900/90 dark:hover:border-slate-800 transition group"
                     >
                       <div className="flex items-start gap-2">
                         <FileText className="w-3.5 h-3.5 text-slate-400 shrink-0 mt-0.5" />
                         <div className="min-w-0 flex-1">
                           <div className="flex items-center justify-between gap-1.5">
                             <p
-                              className="text-xs font-medium text-slate-200 truncate"
+                              className="text-xs font-medium text-slate-800 dark:text-slate-200 truncate"
                               title={doc.filename}
                             >
                               {doc.filename}
                             </p>
 
                             {isDeleting ? (
-                              <Loader2 className="w-3.5 h-3.5 text-rose-400 animate-spin shrink-0" />
+                              <Loader2 className="w-3.5 h-3.5 text-rose-500 dark:text-rose-400 animate-spin shrink-0" />
                             ) : isConfirming ? (
                               <div className="flex items-center gap-1 shrink-0">
                                 <button
@@ -412,7 +406,7 @@ export default function Sidebar({
                                     setConfirmDeleteFile(null);
                                     onDeleteDocument(doc.filename);
                                   }}
-                                  className="p-0.5 rounded bg-rose-500/20 text-rose-300 hover:bg-rose-500/35 border border-rose-500/30 transition cursor-pointer"
+                                  className="p-0.5 rounded bg-rose-50 text-rose-700 hover:bg-rose-100 border border-rose-200 dark:bg-rose-500/20 dark:text-rose-300 dark:hover:bg-rose-500/35 dark:border-rose-500/30 transition cursor-pointer"
                                   title="Konfirmasi hapus"
                                 >
                                   <Check className="w-3 h-3" />
@@ -420,7 +414,7 @@ export default function Sidebar({
                                 <button
                                   type="button"
                                   onClick={() => setConfirmDeleteFile(null)}
-                                  className="p-0.5 rounded bg-slate-800 text-slate-300 hover:bg-slate-700 transition cursor-pointer"
+                                  className="p-0.5 rounded bg-slate-200 text-slate-700 hover:bg-slate-300 dark:bg-slate-800 dark:text-slate-300 dark:hover:bg-slate-700 transition cursor-pointer"
                                   title="Batal"
                                 >
                                   <X className="w-3 h-3" />
@@ -430,7 +424,7 @@ export default function Sidebar({
                               <button
                                 type="button"
                                 onClick={() => setConfirmDeleteFile(doc.filename)}
-                                className="p-1 rounded text-slate-500 hover:text-rose-400 hover:bg-rose-500/10 opacity-0 group-hover:opacity-100 focus:opacity-100 transition shrink-0 cursor-pointer"
+                                className="p-1 rounded text-slate-400 hover:text-rose-600 hover:bg-rose-50 dark:text-slate-500 dark:hover:text-rose-400 dark:hover:bg-rose-500/10 opacity-0 group-hover:opacity-100 focus:opacity-100 transition shrink-0 cursor-pointer"
                                 title={`Hapus ${doc.filename}`}
                               >
                                 <Trash2 className="w-3.5 h-3.5" />
@@ -441,7 +435,7 @@ export default function Sidebar({
                           <div className="flex items-center gap-2 mt-0.5 text-[10px] text-slate-500">
                             <span>{doc.total_chunks} chunks</span>
                             {isConfirming ? (
-                              <span className="text-rose-400 font-medium">
+                              <span className="text-rose-600 dark:text-rose-400 font-medium">
                                 • Hapus dokumen?
                               </span>
                             ) : (
@@ -462,9 +456,9 @@ export default function Sidebar({
       )}
 
       {/* Compact Footer: Top-K Selector */}
-      <div className="px-4 py-3 border-t border-slate-800/80 bg-slate-950">
+      <div className="px-4 py-3 border-t border-slate-200 dark:border-slate-800/80 bg-white dark:bg-slate-950 transition-colors">
         <div className="flex items-center justify-between gap-2">
-          <span className="text-[11px] font-medium text-slate-400">
+          <span className="text-[11px] font-medium text-slate-600 dark:text-slate-400">
             Top-K Konteks
           </span>
           <div className="flex items-center gap-1">
@@ -473,11 +467,10 @@ export default function Sidebar({
                 key={val}
                 type="button"
                 onClick={() => onTopKChange(val)}
-                className={`w-7 h-6 rounded text-[11px] font-medium transition cursor-pointer ${
-                  topK === val
-                    ? "bg-slate-200 text-slate-950"
-                    : "bg-slate-900 text-slate-400 hover:text-slate-200 border border-slate-800"
-                }`}
+                className={`w-7 h-6 rounded text-[11px] font-medium transition cursor-pointer ${topK === val
+                    ? "bg-slate-900 text-white dark:bg-slate-200 dark:text-slate-950"
+                    : "bg-slate-100 text-slate-600 hover:text-slate-900 border border-slate-200 dark:bg-slate-900 dark:text-slate-400 dark:hover:text-slate-200 dark:border-slate-800"
+                  }`}
               >
                 {val}
               </button>
@@ -499,7 +492,7 @@ export default function Sidebar({
       {isOpenMobile && (
         <div className="fixed inset-0 z-50 lg:hidden flex">
           <div
-            className="fixed inset-0 bg-slate-950/75 backdrop-blur-sm"
+            className="fixed inset-0 bg-slate-950/60 dark:bg-slate-950/75 backdrop-blur-sm"
             onClick={onCloseMobile}
           />
           <aside className="relative z-10 h-full">{sidebarContent}</aside>

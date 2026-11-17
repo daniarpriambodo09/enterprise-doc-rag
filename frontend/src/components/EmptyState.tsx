@@ -39,19 +39,19 @@ export default function EmptyState({
   return (
     <div className="max-w-3xl mx-auto py-8 sm:py-14 px-2 animate-fade-in-up">
       <div className="text-center mb-8">
-        <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-indigo-500/10 border border-indigo-500/25 text-indigo-300 text-xs font-medium mb-4">
-          <Sparkles className="w-3.5 h-3.5 text-indigo-400" />
+        <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-indigo-50 border border-indigo-200 text-indigo-700 dark:bg-indigo-500/10 dark:border-indigo-500/25 dark:text-indigo-300 text-xs font-medium mb-4">
+          <Sparkles className="w-3.5 h-3.5 text-indigo-600 dark:text-indigo-400" />
           <span>Hybrid Search + pgvector RAG Engine</span>
         </div>
 
-        <h2 className="text-2xl sm:text-3xl font-bold tracking-tight text-white mb-3">
+        <h2 className="text-2xl sm:text-3xl font-bold tracking-tight text-slate-900 dark:text-white mb-3">
           Analisis Dokumen Perusahaan{" "}
-          <span className="bg-gradient-to-r from-indigo-400 via-violet-400 to-cyan-400 bg-clip-text text-transparent">
+          <span className="bg-gradient-to-r from-indigo-600 via-violet-600 to-cyan-600 dark:from-indigo-400 dark:via-violet-400 dark:to-cyan-400 bg-clip-text text-transparent">
             Lebih Cepat & Akurat
           </span>
         </h2>
 
-        <p className="text-sm text-slate-400 max-w-xl mx-auto leading-relaxed">
+        <p className="text-sm text-slate-600 dark:text-slate-400 max-w-xl mx-auto leading-relaxed">
           {documentCount > 0
             ? `Saat ini terdapat ${documentCount} dokumen terindeks di basis pengetahuan. Ajukan pertanyaan spesifik untuk mendapatkan jawaban terstruktur lengkap dengan sitasi halaman.`
             : "Unggah dokumen PDF perusahaan (SOP, laporan keuangan, kebijakan, atau spesifikasi teknis) pada panel kiri untuk mulai menganalisis."}
@@ -67,19 +67,19 @@ export default function EmptyState({
               key={idx}
               type="button"
               onClick={() => onSelectPrompt(item.prompt)}
-              className="group text-left p-4 rounded-2xl bg-slate-900/70 hover:bg-slate-900 border border-slate-800/90 hover:border-indigo-500/50 transition-all duration-200 shadow-sm hover:shadow-indigo-950/30 cursor-pointer flex flex-col justify-between gap-3"
+              className="group text-left p-4 rounded-2xl bg-white hover:bg-slate-50/80 border border-slate-200 hover:border-indigo-400/70 dark:bg-slate-900/70 dark:hover:bg-slate-900 dark:border-slate-800/90 dark:hover:border-indigo-500/50 transition-all duration-200 shadow-sm dark:hover:shadow-indigo-950/30 cursor-pointer flex flex-col justify-between gap-3"
             >
               <div>
                 <div className="flex items-center justify-between mb-2.5">
-                  <div className="w-8 h-8 rounded-lg bg-indigo-500/10 border border-indigo-500/20 flex items-center justify-center text-indigo-400 group-hover:scale-105 transition-transform">
+                  <div className="w-8 h-8 rounded-lg bg-indigo-50 border border-indigo-200 text-indigo-600 dark:bg-indigo-500/10 dark:border-indigo-500/20 flex items-center justify-center dark:text-indigo-400 group-hover:scale-105 transition-transform">
                     <Icon className="w-4 h-4" />
                   </div>
-                  <ArrowUpRight className="w-4 h-4 text-slate-600 group-hover:text-indigo-400 transition-colors" />
+                  <ArrowUpRight className="w-4 h-4 text-slate-400 group-hover:text-indigo-600 dark:text-slate-600 dark:group-hover:text-indigo-400 transition-colors" />
                 </div>
-                <h3 className="text-xs font-semibold text-slate-200 mb-1">
+                <h3 className="text-xs font-semibold text-slate-800 dark:text-slate-200 mb-1">
                   {item.title}
                 </h3>
-                <p className="text-xs text-slate-400 leading-relaxed line-clamp-2">
+                <p className="text-xs text-slate-600 dark:text-slate-400 leading-relaxed line-clamp-2">
                   {item.prompt}
                 </p>
               </div>

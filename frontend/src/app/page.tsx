@@ -313,11 +313,11 @@ export default function RagWorkspace() {
   };
 
   return (
-    <div className="flex h-screen bg-slate-950 text-slate-100 font-sans overflow-hidden relative">
+    <div className="flex h-screen bg-slate-50 text-slate-900 dark:bg-slate-950 dark:text-slate-100 font-sans overflow-hidden relative transition-colors">
       {/* Ambient Radial Glow */}
       <div className="pointer-events-none fixed inset-0 overflow-hidden z-0">
-        <div className="absolute -top-40 left-1/3 w-96 h-96 bg-indigo-600/10 rounded-full blur-3xl" />
-        <div className="absolute bottom-0 right-1/4 w-96 h-96 bg-violet-600/10 rounded-full blur-3xl" />
+        <div className="absolute -top-40 left-1/3 w-96 h-96 bg-indigo-500/10 dark:bg-indigo-600/10 rounded-full blur-3xl" />
+        <div className="absolute bottom-0 right-1/4 w-96 h-96 bg-violet-500/10 dark:bg-violet-600/10 rounded-full blur-3xl" />
       </div>
 
       {/* Sidebar */}
@@ -356,8 +356,8 @@ export default function RagWorkspace() {
         {/* Messages Feed */}
         <div className="flex-1 overflow-y-auto px-4 sm:px-6 py-6 space-y-6">
           {isLoadingSession ? (
-            <div className="flex items-center justify-center py-20 text-slate-400 gap-2.5 text-sm">
-              <Loader2 className="w-4 h-4 animate-spin text-indigo-400" />
+            <div className="flex items-center justify-center py-20 text-slate-500 dark:text-slate-400 gap-2.5 text-sm">
+              <Loader2 className="w-4 h-4 animate-spin text-indigo-600 dark:text-indigo-400" />
               <span>Memuat riwayat percakapan...</span>
             </div>
           ) : messages.length === 0 ? (
@@ -371,18 +371,18 @@ export default function RagWorkspace() {
 
           {isLoadingChat && (
             <div className="flex gap-3.5 max-w-4xl mx-auto animate-fade-in-up">
-              <div className="w-8 h-8 rounded-xl bg-indigo-500/15 border border-indigo-500/30 flex items-center justify-center shrink-0">
-                <Loader2 className="w-4 h-4 text-indigo-400 animate-spin" />
+              <div className="w-8 h-8 rounded-xl bg-indigo-50 border border-indigo-200 dark:bg-indigo-500/15 dark:border-indigo-500/30 flex items-center justify-center shrink-0">
+                <Loader2 className="w-4 h-4 text-indigo-600 dark:text-indigo-400 animate-spin" />
               </div>
-              <div className="rounded-2xl rounded-tl-sm px-5 py-4 bg-slate-900/80 border border-slate-800/90 backdrop-blur-sm max-w-md w-full">
-                <div className="flex items-center gap-2 text-xs font-medium text-indigo-300 mb-2.5">
+              <div className="rounded-2xl rounded-tl-sm px-5 py-4 bg-white border border-slate-200 dark:bg-slate-900/80 dark:border-slate-800/90 backdrop-blur-sm max-w-md w-full shadow-sm">
+                <div className="flex items-center gap-2 text-xs font-medium text-indigo-700 dark:text-indigo-300 mb-2.5">
                   <Sparkles className="w-3.5 h-3.5 animate-pulse" />
                   <span>Mencari konteks (Top-{topK}) & menyusun jawaban...</span>
                 </div>
                 <div className="space-y-2">
-                  <div className="h-2.5 bg-slate-800 rounded-full w-full animate-pulse" />
-                  <div className="h-2.5 bg-slate-800 rounded-full w-4/5 animate-pulse" />
-                  <div className="h-2.5 bg-slate-800 rounded-full w-3/5 animate-pulse" />
+                  <div className="h-2.5 bg-slate-200 dark:bg-slate-800 rounded-full w-full animate-pulse" />
+                  <div className="h-2.5 bg-slate-200 dark:bg-slate-800 rounded-full w-4/5 animate-pulse" />
+                  <div className="h-2.5 bg-slate-200 dark:bg-slate-800 rounded-full w-3/5 animate-pulse" />
                 </div>
               </div>
             </div>
@@ -392,10 +392,10 @@ export default function RagWorkspace() {
         </div>
 
         {/* Input Composer */}
-        <div className="p-4 sm:px-6 border-t border-slate-800/80 bg-slate-950/80 backdrop-blur-md">
+        <div className="p-4 sm:px-6 border-t border-slate-200 dark:border-slate-800/80 bg-white/80 dark:bg-slate-950/80 backdrop-blur-md transition-colors">
           <form
             onSubmit={handleFormSubmit}
-            className="max-w-4xl mx-auto relative flex items-end gap-2.5 bg-slate-900/90 border border-slate-700/80 focus-within:border-indigo-500/80 focus-within:ring-2 focus-within:ring-indigo-500/15 rounded-2xl p-2 pl-4 shadow-xl transition-all"
+            className="max-w-4xl mx-auto relative flex items-end gap-2.5 bg-white border border-slate-300 focus-within:border-indigo-500 focus-within:ring-2 focus-within:ring-indigo-500/15 dark:bg-slate-900/90 dark:border-slate-700/80 dark:focus-within:border-indigo-500/80 rounded-2xl p-2 pl-4 shadow-sm dark:shadow-xl transition-all"
           >
             <textarea
               ref={textareaRef}
@@ -404,33 +404,35 @@ export default function RagWorkspace() {
               onChange={(e) => setInput(e.target.value)}
               onKeyDown={handleKeyDown}
               placeholder="Tanyakan isi dokumen, prosedur SOP, tabel, atau grafik... (Enter untuk kirim)"
-              className="flex-1 bg-transparent py-2 text-sm text-slate-100 placeholder-slate-500 focus:outline-none resize-none max-h-40 leading-relaxed"
+              className="flex-1 bg-transparent py-2 text-sm text-slate-900 placeholder-slate-400 dark:text-slate-100 dark:placeholder-slate-500 focus:outline-none resize-none max-h-40 leading-relaxed"
             />
             <button
               type="submit"
               disabled={!input.trim() || isLoadingChat}
-              className="px-4 py-2.5 rounded-xl bg-gradient-to-r from-indigo-600 to-violet-600 hover:from-indigo-500 hover:to-violet-500 disabled:opacity-40 disabled:cursor-not-allowed text-white font-medium text-xs sm:text-sm flex items-center gap-2 transition shadow-md shadow-indigo-950/50 shrink-0 cursor-pointer"
+              className="px-4 py-2.5 rounded-xl bg-gradient-to-r from-indigo-600 to-violet-600 hover:from-indigo-500 hover:to-violet-500 disabled:opacity-40 disabled:cursor-not-allowed text-white font-medium text-xs sm:text-sm flex items-center gap-2 transition shadow-md shadow-indigo-500/20 dark:shadow-indigo-950/50 shrink-0 cursor-pointer"
             >
               <Send className="w-4 h-4" />
               <span className="hidden sm:inline">Kirim</span>
             </button>
           </form>
           <p className="max-w-4xl mx-auto text-center text-[11px] text-slate-500 mt-2">
-            Enterprise Doc RAG oleh <span className="text-slate-300 font-medium">Daniar Priambodo</span> • Sitasi halaman otomatis • Shift + Enter untuk baris baru
+            Enterprise Doc RAG oleh <span className="text-slate-700 dark:text-slate-300 font-medium">Daniar Priambodo</span> • Sitasi halaman otomatis • Shift + Enter untuk baris baru
           </p>
         </div>
       </main>
 
       {/* Modal Admin Passcode */}
       {isAdminModalOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-sm">
-          <div className="w-full max-w-sm rounded-2xl bg-slate-900 border border-slate-800 p-5 shadow-2xl animate-fade-in-up">
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/60 dark:bg-slate-950/80 backdrop-blur-sm">
+          <div className="w-full max-w-sm rounded-2xl bg-white border border-slate-200 dark:bg-slate-900 dark:border-slate-800 p-5 shadow-2xl animate-fade-in-up">
             <div className="flex items-center justify-between mb-3">
               <div className="flex items-center gap-2">
-                <div className="p-1.5 rounded-lg bg-slate-800 border border-slate-700 text-slate-200">
+                <div className="p-1.5 rounded-lg bg-slate-100 border border-slate-200 text-slate-700 dark:bg-slate-800 dark:border-slate-700 dark:text-slate-200">
                   <Lock className="w-4 h-4" />
                 </div>
-                <h2 className="text-sm font-semibold text-white">Admin Mode</h2>
+                <h2 className="text-sm font-semibold text-slate-900 dark:text-white">
+                  Admin Mode
+                </h2>
               </div>
               <button
                 type="button"
@@ -438,14 +440,14 @@ export default function RagWorkspace() {
                   setIsAdminModalOpen(false);
                   setPendingAdminAction(null);
                 }}
-                className="p-1 rounded-lg text-slate-400 hover:text-white hover:bg-slate-800 transition cursor-pointer"
+                className="p-1 rounded-lg text-slate-500 hover:text-slate-900 hover:bg-slate-100 dark:text-slate-400 dark:hover:text-white dark:hover:bg-slate-800 transition cursor-pointer"
                 aria-label="Tutup modal"
               >
                 <X className="w-4 h-4" />
               </button>
             </div>
 
-            <p className="text-xs text-slate-400 leading-relaxed mb-3">
+            <p className="text-xs text-slate-600 dark:text-slate-400 leading-relaxed mb-3">
               {adminModalNotice ||
                 "Masukkan Admin Passcode untuk mengaktifkan fitur unggah dan hapus dokumen pada mode demo publik."}
             </p>
@@ -457,14 +459,14 @@ export default function RagWorkspace() {
                 onChange={(e) => setAdminPasscodeInput(e.target.value)}
                 placeholder="Masukkan Admin Passcode..."
                 autoFocus
-                className="w-full bg-slate-950 border border-slate-700 rounded-xl px-3.5 py-2.5 text-sm text-slate-100 placeholder-slate-500 focus:outline-none focus:border-indigo-500"
+                className="w-full bg-slate-50 border border-slate-300 text-slate-900 placeholder-slate-400 dark:bg-slate-950 dark:border-slate-700 rounded-xl px-3.5 py-2.5 text-sm dark:text-slate-100 dark:placeholder-slate-500 focus:outline-none focus:border-indigo-500"
               />
               <div className="flex items-center justify-between gap-2 pt-1">
                 {hasAdminPasscode ? (
                   <button
                     type="button"
                     onClick={handleClearAdminPasscode}
-                    className="px-3 py-2 rounded-xl text-xs font-medium text-rose-300 hover:bg-rose-500/10 border border-rose-500/20 transition cursor-pointer"
+                    className="px-3 py-2 rounded-xl text-xs font-medium text-rose-600 hover:bg-rose-50 border border-rose-200 dark:text-rose-300 dark:hover:bg-rose-500/10 dark:border-rose-500/20 transition cursor-pointer"
                   >
                     Keluar Admin
                   </button>
@@ -478,13 +480,13 @@ export default function RagWorkspace() {
                       setIsAdminModalOpen(false);
                       setPendingAdminAction(null);
                     }}
-                    className="px-3 py-2 rounded-xl text-xs font-medium text-slate-300 hover:bg-slate-800 transition cursor-pointer"
+                    className="px-3 py-2 rounded-xl text-xs font-medium text-slate-600 hover:bg-slate-100 dark:text-slate-300 dark:hover:bg-slate-800 transition cursor-pointer"
                   >
                     Batal
                   </button>
                   <button
                     type="submit"
-                    className="px-4 py-2 rounded-xl bg-slate-100 hover:bg-white text-slate-950 text-xs font-semibold transition cursor-pointer"
+                    className="px-4 py-2 rounded-xl bg-slate-900 hover:bg-slate-800 text-white dark:bg-slate-100 dark:hover:bg-white dark:text-slate-950 text-xs font-semibold transition cursor-pointer"
                   >
                     {pendingAdminAction ? "Simpan & Lanjutkan" : "Simpan"}
                   </button>

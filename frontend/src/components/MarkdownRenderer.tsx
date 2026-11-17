@@ -69,15 +69,15 @@ function CodeBlock({
   };
 
   return (
-    <div className="my-3 rounded-xl overflow-hidden border border-slate-700/70 bg-slate-950/90 shadow-inner">
-      <div className="flex items-center justify-between px-3.5 py-1.5 bg-slate-900/90 border-b border-slate-800 text-[11px] text-slate-400">
+    <div className="my-3 rounded-xl overflow-hidden border border-slate-200 dark:border-slate-700/70 bg-slate-900 dark:bg-slate-950/90 shadow-inner">
+      <div className="flex items-center justify-between px-3.5 py-1.5 bg-slate-800 dark:bg-slate-900/90 border-b border-slate-700 dark:border-slate-800 text-[11px] text-slate-300 dark:text-slate-400">
         <span className="font-mono uppercase tracking-wider">
           {language || "code"}
         </span>
         <button
           type="button"
           onClick={handleCopy}
-          className="flex items-center gap-1 text-slate-400 hover:text-slate-200 transition cursor-pointer"
+          className="flex items-center gap-1 text-slate-300 hover:text-white dark:text-slate-400 dark:hover:text-slate-200 transition cursor-pointer"
         >
           {copied ? (
             <>
@@ -101,33 +101,33 @@ function CodeBlock({
 
 const markdownComponents: Components = {
   h1: ({ children }) => (
-    <h1 className="text-lg font-bold text-white mt-4 mb-2 pb-1.5 border-b border-slate-800/80 first:mt-0">
+    <h1 className="text-lg font-bold text-slate-900 dark:text-white mt-4 mb-2 pb-1.5 border-b border-slate-200 dark:border-slate-800/80 first:mt-0">
       {children}
     </h1>
   ),
   h2: ({ children }) => (
-    <h2 className="text-base font-semibold text-indigo-200 mt-4 mb-2 first:mt-0 flex items-center gap-2">
+    <h2 className="text-base font-semibold text-indigo-700 dark:text-indigo-200 mt-4 mb-2 first:mt-0 flex items-center gap-2">
       <span className="w-1 h-4 rounded-full bg-indigo-500 inline-block shrink-0" />
       <span>{children}</span>
     </h2>
   ),
   h3: ({ children }) => (
-    <h3 className="text-sm font-semibold text-slate-100 mt-3 mb-1.5 first:mt-0">
+    <h3 className="text-sm font-semibold text-slate-900 dark:text-slate-100 mt-3 mb-1.5 first:mt-0">
       {children}
     </h3>
   ),
   p: ({ children }) => (
-    <p className="text-sm leading-7 text-slate-200/95 mb-3 last:mb-0">
+    <p className="text-sm leading-7 text-slate-700 dark:text-slate-200/95 mb-3 last:mb-0">
       {formatChildrenWithBreaks(children)}
     </p>
   ),
   ul: ({ children }) => (
-    <ul className="list-disc pl-5 mb-3 space-y-1.5 text-sm text-slate-200/95 marker:text-indigo-400">
+    <ul className="list-disc pl-5 mb-3 space-y-1.5 text-sm text-slate-700 dark:text-slate-200/95 marker:text-indigo-500 dark:marker:text-indigo-400">
       {children}
     </ul>
   ),
   ol: ({ children }) => (
-    <ol className="list-decimal pl-5 mb-3 space-y-1.5 text-sm text-slate-200/95 marker:text-indigo-400 marker:font-semibold">
+    <ol className="list-decimal pl-5 mb-3 space-y-1.5 text-sm text-slate-700 dark:text-slate-200/95 marker:text-indigo-600 dark:marker:text-indigo-400 marker:font-semibold">
       {children}
     </ol>
   ),
@@ -135,21 +135,25 @@ const markdownComponents: Components = {
     <li className="leading-6 pl-0.5">{formatChildrenWithBreaks(children)}</li>
   ),
   strong: ({ children }) => (
-    <strong className="font-semibold text-white">{children}</strong>
+    <strong className="font-semibold text-slate-950 dark:text-white">
+      {children}
+    </strong>
   ),
-  em: ({ children }) => <em className="italic text-slate-300">{children}</em>,
+  em: ({ children }) => (
+    <em className="italic text-slate-600 dark:text-slate-300">{children}</em>
+  ),
   blockquote: ({ children }) => (
-    <blockquote className="my-3 pl-4 pr-3 py-2 border-l-2 border-indigo-500 bg-indigo-950/25 rounded-r-lg text-slate-300 text-sm italic">
+    <blockquote className="my-3 pl-4 pr-3 py-2 border-l-2 border-indigo-500 bg-indigo-50/70 dark:bg-indigo-950/25 rounded-r-lg text-slate-700 dark:text-slate-300 text-sm italic">
       {children}
     </blockquote>
   ),
-  hr: () => <hr className="my-4 border-slate-800" />,
+  hr: () => <hr className="my-4 border-slate-200 dark:border-slate-800" />,
   a: ({ href, children }) => (
     <a
       href={href}
       target="_blank"
       rel="noopener noreferrer"
-      className="text-indigo-400 hover:text-indigo-300 underline underline-offset-2 transition"
+      className="text-indigo-600 hover:text-indigo-700 dark:text-indigo-400 dark:hover:text-indigo-300 underline underline-offset-2 transition"
     >
       {children}
     </a>
@@ -160,37 +164,41 @@ const markdownComponents: Components = {
       return <CodeBlock className={className}>{children}</CodeBlock>;
     }
     return (
-      <code className="px-1.5 py-0.5 rounded-md bg-slate-800/90 border border-slate-700/60 text-indigo-300 font-mono text-[12px]">
+      <code className="px-1.5 py-0.5 rounded-md bg-slate-100 border border-slate-200 text-indigo-700 dark:bg-slate-800/90 dark:border-slate-700/60 dark:text-indigo-300 font-mono text-[12px]">
         {children}
       </code>
     );
   },
   pre: ({ children }) => <>{children}</>,
   table: ({ children }) => (
-    <div className="my-4 overflow-x-auto rounded-xl border border-slate-700/70 bg-slate-950/70 shadow-md">
+    <div className="my-4 overflow-x-auto rounded-xl border border-slate-200 dark:border-slate-700/70 bg-white dark:bg-slate-950/70 shadow-sm dark:shadow-md">
       <table className="w-full text-left border-collapse text-xs sm:text-[13px]">
         {children}
       </table>
     </div>
   ),
   thead: ({ children }) => (
-    <thead className="bg-slate-800/90 text-slate-200 border-b border-slate-700/80">
+    <thead className="bg-slate-100 text-slate-800 border-b border-slate-200 dark:bg-slate-800/90 dark:text-slate-200 dark:border-slate-700/80">
       {children}
     </thead>
   ),
   tbody: ({ children }) => (
-    <tbody className="divide-y divide-slate-800/80">{children}</tbody>
+    <tbody className="divide-y divide-slate-200 dark:divide-slate-800/80">
+      {children}
+    </tbody>
   ),
   tr: ({ children }) => (
-    <tr className="hover:bg-slate-800/40 transition-colors">{children}</tr>
+    <tr className="hover:bg-slate-50 dark:hover:bg-slate-800/40 transition-colors">
+      {children}
+    </tr>
   ),
   th: ({ children }) => (
-    <th className="px-4 py-3 font-semibold text-[11px] uppercase tracking-wider text-indigo-200 whitespace-nowrap">
+    <th className="px-4 py-3 font-semibold text-[11px] uppercase tracking-wider text-indigo-700 dark:text-indigo-200 whitespace-nowrap">
       {formatChildrenWithBreaks(children)}
     </th>
   ),
   td: ({ children }) => (
-    <td className="px-4 py-3 text-slate-300 align-top leading-relaxed">
+    <td className="px-4 py-3 text-slate-700 dark:text-slate-300 align-top leading-relaxed">
       {formatChildrenWithBreaks(children)}
     </td>
   ),
