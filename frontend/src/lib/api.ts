@@ -109,6 +109,111 @@ async function postUploadImagePage(
     return res.json();
 }
 
+async function postUploadExtractedText(
+    filename: string,
+    pageNumber: number,
+    extractedText: string,
+    isFirstBatch: boolean
+) {
+    const res = await fetch(`${API_BASE_URL}/upload`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+            filename,
+            pageNumber,
+            extractedText,
+            isFirstBatch,
+        }),
+    });
+
+    if (!res.ok) {
+        let detail = `Gagal menyimpan hasil OCR halaman ${pageNumber} (HTTP ${res.status})`;
+        try {
+            const err = await res.json();
+            if (err?.detail) detail = err.detail;
+        } catch {
+            // fallback
+        }
+        throw new Error(detail);
+    }
+    return res.json();
+}
+
+async function processRenderedPagesWithFallback(
+    renderedPages: { pageIndex: number; base64: string }[],
+    filename: string,
+    pageOffset: number,
+    totalPages: number,
+    isFirstBatchStart: boolean,
+    onProgress?: (statusText: string) => void
+): Promise<{ totalChunks: number; ingestionMode: string }> {
+    let totalChunks = 0;
+    let ingestionMode = "groq-vision";
+    let groqVisionAvailable = true;
+
+    for (let i = 0; i < renderedPages.length; i++) {
+        const pageNum = pageOffset + i + 1;
+        const isFirst = isFirstBatchStart && i === 0;
+
+        if (groqVisionAvailable) {
+            onProgress?.(
+                `Gemini sibuk, mengalihkan analisis visual ke Groq Vision (Halaman ${pageNum}/${totalPages})...`
+            );
+            try {
+                const res = await postUploadImagePage(
+                    renderedPages[i].base64,
+                    filename,
+                    pageNum,
+                    isFirst
+                );
+                totalChunks += Number(res.total_chunks) || 0;
+                continue;
+            } catch (groqErr) {
+                const msg = groqErr instanceof Error ? groqErr.message : "";
+                const shouldFallbackToOcr =
+                    msg.includes("NO_GROQ_VISION_MODEL") ||
+                    /\b(404|503|429)\b|model_not_found/i.test(msg);
+
+                if (!shouldFallbackToOcr) {
+                    throw groqErr;
+                }
+                groqVisionAvailable = false;
+            }
+        }
+
+        // Jaring pengaman terakhir: Client-Side OCR (Tesseract.js) di browser
+        onProgress?.(
+            `Membaca teks scan dengan OCR lokal (Halaman ${pageNum}/${totalPages})...`
+        );
+        const Tesseract = await import("tesseract.js");
+        const { data } = await Tesseract.recognize(
+            renderedPages[i].base64,
+            "ind+eng"
+        );
+        const ocrText = (data?.text || "").trim();
+        if (!ocrText) {
+            continue;
+        }
+
+        const res = await postUploadExtractedText(
+            filename,
+            pageNum,
+            ocrText,
+            isFirst
+        );
+        totalChunks += Number(res.total_chunks) || 0;
+        ingestionMode = "client-ocr";
+    }
+
+    if (totalChunks === 0) {
+        throw new Error(
+            "Tidak ada teks yang berhasil diekstrak dari gambar PDF melalui Vision API maupun OCR lokal."
+        );
+    }
+
+    return { totalChunks, ingestionMode };
+}
+
 async function renderPdfBytesToJpeg(
     pdfBuffer: ArrayBuffer
 ): Promise<{ pageIndex: number; base64: string }[]> {
@@ -167,31 +272,24 @@ export async function uploadDocument(
             const msg = err instanceof Error ? err.message : "";
             if (msg !== "GEMINI_503_SCAN_PDF") throw err;
 
-            // Auto-Fallback ke Client-Side PDF-to-Image + Groq Vision
+            // Auto-Fallback ke Client-Side PDF-to-Image + Groq Vision / Tesseract OCR
             const buffer = await file.arrayBuffer();
             const renderedPages = await renderPdfBytesToJpeg(buffer);
-            let totalChunks = 0;
-
-            for (let i = 0; i < renderedPages.length; i++) {
-                const pageNum = i + 1;
-                onProgress?.(
-                    `Gemini sibuk, mengalihkan analisis visual ke Groq Vision (Halaman ${pageNum}/${renderedPages.length})...`
-                );
-                const res = await postUploadImagePage(
-                    renderedPages[i].base64,
-                    file.name,
-                    pageNum,
-                    i === 0
-                );
-                totalChunks += Number(res.total_chunks) || 0;
-            }
+            const fallbackRes = await processRenderedPagesWithFallback(
+                renderedPages,
+                file.name,
+                0,
+                renderedPages.length,
+                true,
+                onProgress
+            );
 
             return {
                 status: "success",
                 filename: file.name,
-                total_chunks: totalChunks,
-                ingestion_mode: "groq-vision",
-                message: `${file.name} berhasil diproses (${totalChunks} chunks) via Groq Vision AI.`,
+                total_chunks: fallbackRes.totalChunks,
+                ingestion_mode: fallbackRes.ingestionMode,
+                message: `${file.name} berhasil diproses (${fallbackRes.totalChunks} chunks).`,
             };
         }
     }
@@ -231,22 +329,18 @@ export async function uploadDocument(
             const msg = err instanceof Error ? err.message : "";
             if (msg !== "GEMINI_503_SCAN_PDF") throw err;
 
-            onProgress?.(
-                `Gemini sibuk, mengalihkan analisis visual ke Groq Vision (Halaman ${cursor + 1}/${totalPages})...`
-            );
             const renderedPages = await renderPdfBytesToJpeg(batchArrayBuffer);
-            for (let i = 0; i < renderedPages.length; i++) {
-                const pageNum = cursor + i + 1;
-                const res = await postUploadImagePage(
-                    renderedPages[i].base64,
-                    file.name,
-                    pageNum,
-                    isFirst && i === 0
-                );
-                totalChunks += Number(res.total_chunks) || 0;
-                lastIngestionMode = "groq-vision";
-                isFirst = false;
-            }
+            const fallbackRes = await processRenderedPagesWithFallback(
+                renderedPages,
+                file.name,
+                cursor,
+                totalPages,
+                isFirst,
+                onProgress
+            );
+            totalChunks += fallbackRes.totalChunks;
+            lastIngestionMode = fallbackRes.ingestionMode;
+            isFirst = false;
         }
 
         cursor = batchEnd;
