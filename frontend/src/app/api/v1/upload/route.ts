@@ -5,6 +5,7 @@ import { chunkPages } from "@/lib/server/chunker";
 import {
   extractMultimodalPdfContent,
   getBatchEmbeddings,
+  isVisionUnavailableError,
   type ExtractedPdfPage,
 } from "@/lib/server/gemini";
 
@@ -42,14 +43,16 @@ export async function POST(req: NextRequest) {
 
     let pages: ExtractedPdfPage[] = [];
     let ingestionMode: "multimodal" | "text-fallback" = "multimodal";
+    let multimodalError: unknown = null;
 
-    // Utama: Ekstraksi Multimodal (Teks + Gambar/Grafik/Diagram/Tabel) via Gemini 2.5 Flash
+    // Utama: Ekstraksi Multimodal (Teks + Gambar/Grafik/Diagram/Tabel) via Gemini Vision
     try {
       pages = await extractMultimodalPdfContent(buffer);
-    } catch (multimodalError) {
+    } catch (err) {
+      multimodalError = err;
       console.warn(
         "Multimodal PDF extraction failed or exceeded limit, falling back to unpdf:",
-        multimodalError
+        err
       );
       ingestionMode = "text-fallback";
       const { text } = await extractText(new Uint8Array(arrayBuffer), {
@@ -70,6 +73,15 @@ export async function POST(req: NextRequest) {
 
     const chunks = chunkPages(pages, file.name, 800, 150);
     if (chunks.length === 0) {
+      if (multimodalError && isVisionUnavailableError(multimodalError)) {
+        return NextResponse.json(
+          {
+            detail:
+              "Server Gemini Vision sedang sibuk (503) dan PDF ini berupa hasil scan gambar tanpa teks. Silakan coba unggah kembali beberapa saat lagi.",
+          },
+          { status: 503 }
+        );
+      }
       return NextResponse.json(
         { detail: "Tidak ada teks atau konten visual yang bisa diekstrak dari PDF ini." },
         { status: 400 }

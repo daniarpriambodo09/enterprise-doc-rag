@@ -1,7 +1,7 @@
 import { PDFDocument } from "pdf-lib";
 
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || "/api/v1";
-const MAX_UPLOAD_BATCH_BYTES = 3.5 * 1024 * 1024; // 3.5 MB (aman di bawah limit 4.5 MB Vercel)
+const MAX_UPLOAD_BATCH_BYTES = 2.5 * 1024 * 1024; // 2.5 MB per batch agar payload Gemini Vision ringan & di bawah limit 4.5 MB Vercel
 
 export interface SourceCitation {
     filename: string;
@@ -110,7 +110,7 @@ export async function uploadDocument(
         let batchEnd = Math.min(cursor + 2, totalPages);
         let subBytes = await createSubPdfBytes(sourceDoc, cursor, batchEnd);
 
-        // Jika 2 halaman masih > 3.5 MB, turunkan ke 1 halaman per batch
+        // Jika 2 halaman masih > 2.5 MB, turunkan ke 1 halaman per batch
         if (subBytes.byteLength > MAX_UPLOAD_BATCH_BYTES && batchEnd - cursor > 1) {
             batchEnd = cursor + 1;
             subBytes = await createSubPdfBytes(sourceDoc, cursor, batchEnd);
