@@ -1,7 +1,8 @@
 "use client";
 
 import React from "react";
-import { Menu, RotateCcw, Cpu } from "lucide-react";
+import Link from "next/link";
+import { Menu, RotateCcw, Cpu, Info } from "lucide-react";
 
 interface HeaderProps {
   onOpenMobileSidebar: () => void;
@@ -38,6 +39,15 @@ export default function Header({
       </div>
 
       <div className="flex items-center gap-2.5 shrink-0">
+        <Link
+          href="/about"
+          className="inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-xl bg-slate-800/70 hover:bg-slate-800 border border-slate-700/70 text-xs font-medium text-slate-300 hover:text-white transition"
+          title="Tentang TanyaDoc"
+        >
+          <Info className="w-3.5 h-3.5 text-slate-400" />
+          <span className="hidden sm:inline">Tentang</span>
+        </Link>
+
         <span className="hidden md:inline-flex items-center text-[11px] font-medium px-2.5 py-1 rounded-full bg-indigo-950/70 text-indigo-300 border border-indigo-800/50">
           by Daniar Priambodo
         </span>
