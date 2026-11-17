@@ -106,7 +106,9 @@ export default function RagWorkspace() {
         setUploadProgress(statusText);
       });
       const modeText =
-        res.ingestion_mode === "multimodal"
+        res.ingestion_mode === "groq-vision"
+          ? "Groq Vision AI"
+          : res.ingestion_mode === "multimodal"
           ? "Multimodal AI"
           : "Ekstraksi Teks";
       setUploadStatus({

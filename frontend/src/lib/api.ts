@@ -79,6 +79,66 @@ async function postUploadBatch(
     return res.json();
 }
 
+async function postUploadImagePage(
+    imageBase64: string,
+    filename: string,
+    pageNumber: number,
+    isFirstBatch: boolean
+) {
+    const formData = new FormData();
+    formData.append("imageBase64", imageBase64);
+    formData.append("filename", filename);
+    formData.append("pageNumber", String(pageNumber));
+    formData.append("isFirstBatch", isFirstBatch ? "true" : "false");
+
+    const res = await fetch(`${API_BASE_URL}/upload`, {
+        method: "POST",
+        body: formData,
+    });
+
+    if (!res.ok) {
+        let detail = `Gagal memproses gambar halaman ${pageNumber} (HTTP ${res.status})`;
+        try {
+            const err = await res.json();
+            if (err?.detail) detail = err.detail;
+        } catch {
+            // fallback
+        }
+        throw new Error(detail);
+    }
+    return res.json();
+}
+
+async function renderPdfBytesToJpeg(
+    pdfBuffer: ArrayBuffer
+): Promise<{ pageIndex: number; base64: string }[]> {
+    const pdfjsLib = await import("pdfjs-dist");
+    pdfjsLib.GlobalWorkerOptions.workerSrc = `https://unpkg.com/pdfjs-dist@${pdfjsLib.version}/build/pdf.worker.min.mjs`;
+
+    const loadingTask = pdfjsLib.getDocument({ data: new Uint8Array(pdfBuffer) });
+    const pdf = await loadingTask.promise;
+    const rendered: { pageIndex: number; base64: string }[] = [];
+
+    for (let i = 1; i <= pdf.numPages; i++) {
+        const page = await pdf.getPage(i);
+        const viewport = page.getViewport({ scale: 1.5 });
+        const canvas = document.createElement("canvas");
+        canvas.width = Math.floor(viewport.width);
+        canvas.height = Math.floor(viewport.height);
+
+        const context = canvas.getContext("2d");
+        if (!context) {
+            throw new Error("Canvas 2D context tidak tersedia di browser.");
+        }
+
+        await page.render({ canvas, canvasContext: context, viewport }).promise;
+        const dataUrl = canvas.toDataURL("image/jpeg", 0.8);
+        rendered.push({ pageIndex: i - 1, base64: dataUrl });
+    }
+
+    return rendered;
+}
+
 async function createSubPdfBytes(
     sourceDoc: PDFDocument,
     startIdx: number,
@@ -101,7 +161,39 @@ export async function uploadDocument(
     onProgress?: (statusText: string) => void
 ) {
     if (file.size <= MAX_UPLOAD_BATCH_BYTES) {
-        return postUploadBatch(file, file.name, 0, true);
+        try {
+            return await postUploadBatch(file, file.name, 0, true);
+        } catch (err) {
+            const msg = err instanceof Error ? err.message : "";
+            if (msg !== "GEMINI_503_SCAN_PDF") throw err;
+
+            // Auto-Fallback ke Client-Side PDF-to-Image + Groq Vision
+            const buffer = await file.arrayBuffer();
+            const renderedPages = await renderPdfBytesToJpeg(buffer);
+            let totalChunks = 0;
+
+            for (let i = 0; i < renderedPages.length; i++) {
+                const pageNum = i + 1;
+                onProgress?.(
+                    `Gemini sibuk, mengalihkan analisis visual ke Groq Vision (Halaman ${pageNum}/${renderedPages.length})...`
+                );
+                const res = await postUploadImagePage(
+                    renderedPages[i].base64,
+                    file.name,
+                    pageNum,
+                    i === 0
+                );
+                totalChunks += Number(res.total_chunks) || 0;
+            }
+
+            return {
+                status: "success",
+                filename: file.name,
+                total_chunks: totalChunks,
+                ingestion_mode: "groq-vision",
+                message: `${file.name} berhasil diproses (${totalChunks} chunks) via Groq Vision AI.`,
+            };
+        }
     }
 
     onProgress?.("Memecah PDF berukuran besar ke dalam beberapa batch...");
@@ -127,13 +219,36 @@ export async function uploadDocument(
         onProgress?.(`Memproses halaman ${cursor + 1} dari ${totalPages}...`);
         const batchArrayBuffer = subBytes.slice().buffer;
         const batchBlob = new Blob([batchArrayBuffer], { type: "application/pdf" });
-        const res = await postUploadBatch(batchBlob, file.name, cursor, isFirst);
 
-        totalChunks += Number(res.total_chunks) || 0;
-        if (res.ingestion_mode) {
-            lastIngestionMode = res.ingestion_mode;
+        try {
+            const res = await postUploadBatch(batchBlob, file.name, cursor, isFirst);
+            totalChunks += Number(res.total_chunks) || 0;
+            if (res.ingestion_mode) {
+                lastIngestionMode = res.ingestion_mode;
+            }
+            isFirst = false;
+        } catch (err) {
+            const msg = err instanceof Error ? err.message : "";
+            if (msg !== "GEMINI_503_SCAN_PDF") throw err;
+
+            onProgress?.(
+                `Gemini sibuk, mengalihkan analisis visual ke Groq Vision (Halaman ${cursor + 1}/${totalPages})...`
+            );
+            const renderedPages = await renderPdfBytesToJpeg(batchArrayBuffer);
+            for (let i = 0; i < renderedPages.length; i++) {
+                const pageNum = cursor + i + 1;
+                const res = await postUploadImagePage(
+                    renderedPages[i].base64,
+                    file.name,
+                    pageNum,
+                    isFirst && i === 0
+                );
+                totalChunks += Number(res.total_chunks) || 0;
+                lastIngestionMode = "groq-vision";
+                isFirst = false;
+            }
         }
-        isFirst = false;
+
         cursor = batchEnd;
     }
 

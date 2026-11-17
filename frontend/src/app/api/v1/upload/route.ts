@@ -8,82 +8,117 @@ import {
   isVisionUnavailableError,
   type ExtractedPdfPage,
 } from "@/lib/server/gemini";
+import { extractImageContentWithGroq } from "@/lib/server/groq";
 
 export const maxDuration = 60;
 
 export async function POST(req: NextRequest) {
   try {
     const formData = await req.formData();
-    const file = formData.get("file");
 
-    if (!file || !(file instanceof File)) {
-      return NextResponse.json(
-        { detail: "File PDF wajib disertakan." },
-        { status: 400 }
-      );
-    }
+    const imageBase64Raw = formData.get("imageBase64");
+    const isImageMode = typeof imageBase64Raw === "string" && imageBase64Raw.length > 0;
 
-    if (!file.name.toLowerCase().endsWith(".pdf")) {
-      return NextResponse.json(
-        { detail: "Saat ini hanya mendukung file PDF." },
-        { status: 400 }
-      );
-    }
-
-    const pageOffsetRaw = formData.get("pageOffset");
-    const pageOffset = Math.max(
-      0,
-      Number.parseInt(String(pageOffsetRaw ?? "0"), 10) || 0
-    );
     const isFirstBatchRaw = formData.get("isFirstBatch");
     const isFirstBatch = String(isFirstBatchRaw ?? "true") !== "false";
 
-    const arrayBuffer = await file.arrayBuffer();
-    const buffer = Buffer.from(arrayBuffer);
-
+    let targetFilename = "";
     let pages: ExtractedPdfPage[] = [];
-    let ingestionMode: "multimodal" | "text-fallback" = "multimodal";
-    let multimodalError: unknown = null;
+    let ingestionMode: "multimodal" | "text-fallback" | "groq-vision" = "multimodal";
 
-    // Utama: Ekstraksi Multimodal (Teks + Gambar/Grafik/Diagram/Tabel) via Gemini Vision
-    try {
-      pages = await extractMultimodalPdfContent(buffer);
-    } catch (err) {
-      multimodalError = err;
-      console.warn(
-        "Multimodal PDF extraction failed or exceeded limit, falling back to unpdf:",
-        err
-      );
-      ingestionMode = "text-fallback";
-      const { text } = await extractText(new Uint8Array(arrayBuffer), {
-        mergePages: false,
-      });
-      pages = text.map((pageText, idx) => ({
-        pageNumber: idx + 1,
-        text: pageText,
-      }));
-    }
-
-    if (pageOffset > 0) {
-      pages = pages.map((p) => ({
-        ...p,
-        pageNumber: p.pageNumber + pageOffset,
-      }));
-    }
-
-    const chunks = chunkPages(pages, file.name, 800, 150);
-    if (chunks.length === 0) {
-      if (multimodalError && isVisionUnavailableError(multimodalError)) {
+    if (isImageMode) {
+      // Mode 1: Fallback Gambar Halaman via Groq Vision
+      const filenameRaw = formData.get("filename");
+      targetFilename = typeof filenameRaw === "string" ? filenameRaw.trim() : "";
+      if (!targetFilename) {
         return NextResponse.json(
-          {
-            detail:
-              "Server Gemini Vision sedang sibuk (503) dan PDF ini berupa hasil scan gambar tanpa teks. Silakan coba unggah kembali beberapa saat lagi.",
-          },
+          { detail: "Field 'filename' wajib disertakan untuk upload gambar." },
+          { status: 400 }
+        );
+      }
+
+      const pageNumberRaw = formData.get("pageNumber");
+      const pageNumber = Math.max(
+        1,
+        Number.parseInt(String(pageNumberRaw ?? "1"), 10) || 1
+      );
+
+      const extractedText = await extractImageContentWithGroq(
+        imageBase64Raw,
+        pageNumber
+      );
+      ingestionMode = "groq-vision";
+      pages = extractedText ? [{ pageNumber, text: extractedText }] : [];
+    } else {
+      // Mode 2: Upload PDF (Gemini Vision + Fallback unpdf)
+      const file = formData.get("file");
+
+      if (!file || !(file instanceof File)) {
+        return NextResponse.json(
+          { detail: "File PDF wajib disertakan." },
+          { status: 400 }
+        );
+      }
+
+      if (!file.name.toLowerCase().endsWith(".pdf")) {
+        return NextResponse.json(
+          { detail: "Saat ini hanya mendukung file PDF." },
+          { status: 400 }
+        );
+      }
+
+      targetFilename = file.name;
+
+      const pageOffsetRaw = formData.get("pageOffset");
+      const pageOffset = Math.max(
+        0,
+        Number.parseInt(String(pageOffsetRaw ?? "0"), 10) || 0
+      );
+
+      const arrayBuffer = await file.arrayBuffer();
+      const buffer = Buffer.from(arrayBuffer);
+
+      let multimodalError: unknown = null;
+
+      try {
+        pages = await extractMultimodalPdfContent(buffer);
+      } catch (err) {
+        multimodalError = err;
+        console.warn(
+          "Multimodal PDF extraction failed or exceeded limit, falling back to unpdf:",
+          err
+        );
+        ingestionMode = "text-fallback";
+        const { text } = await extractText(new Uint8Array(arrayBuffer), {
+          mergePages: false,
+        });
+        pages = text.map((pageText, idx) => ({
+          pageNumber: idx + 1,
+          text: pageText,
+        }));
+      }
+
+      if (pageOffset > 0) {
+        pages = pages.map((p) => ({
+          ...p,
+          pageNumber: p.pageNumber + pageOffset,
+        }));
+      }
+
+      // Cek apakah PDF kosong setelah fallback unpdf karena Gemini 503
+      const preChunks = chunkPages(pages, targetFilename, 800, 150);
+      if (preChunks.length === 0 && multimodalError && isVisionUnavailableError(multimodalError)) {
+        return NextResponse.json(
+          { detail: "GEMINI_503_SCAN_PDF" },
           { status: 503 }
         );
       }
+    }
+
+    const chunks = chunkPages(pages, targetFilename, 800, 150);
+    if (chunks.length === 0) {
       return NextResponse.json(
-        { detail: "Tidak ada teks atau konten visual yang bisa diekstrak dari PDF ini." },
+        { detail: "Tidak ada teks atau konten visual yang bisa diekstrak dari dokumen ini." },
         { status: 400 }
       );
     }
@@ -105,7 +140,7 @@ export async function POST(req: NextRequest) {
     if (isFirstBatch) {
       const deletedRows = await sql`
         DELETE FROM document_chunks
-        WHERE filename = ${file.name}
+        WHERE filename = ${targetFilename}
         RETURNING id;
       `;
       overwrittenChunks = deletedRows.length;
@@ -121,17 +156,19 @@ export async function POST(req: NextRequest) {
     }
 
     const modeLabel =
-      ingestionMode === "multimodal"
+      ingestionMode === "groq-vision"
+        ? "Groq Vision AI"
+        : ingestionMode === "multimodal"
         ? "Multimodal AI (Teks & Visual)"
         : "Ekstraksi Teks (Fallback)";
 
     return NextResponse.json({
       status: "success",
-      filename: file.name,
+      filename: targetFilename,
       total_chunks: chunks.length,
       overwritten_chunks: overwrittenChunks,
       ingestion_mode: ingestionMode,
-      message: `${file.name} berhasil diproses (${chunks.length} chunks) via ${modeLabel}.`,
+      message: `${targetFilename} berhasil diproses (${chunks.length} chunks) via ${modeLabel}.`,
     });
   } catch (error: unknown) {
     console.error("Upload error:", error);
