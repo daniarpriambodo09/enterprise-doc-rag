@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState, useEffect, useRef } from "react";
-import { Send, Loader2, Sparkles } from "lucide-react";
+import { Send, Loader2, Sparkles, Lock, X } from "lucide-react";
 import {
   fetchDocuments,
   uploadDocument,
@@ -10,6 +10,9 @@ import {
   fetchSessions,
   fetchSessionDetail,
   deleteSession,
+  AdminAuthError,
+  getStoredAdminPasscode,
+  setStoredAdminPasscode,
   DocumentItem,
   ChatSessionItem,
 } from "../lib/api";
@@ -50,6 +53,15 @@ export default function RagWorkspace() {
     text: string;
   } | null>(null);
   const [isMobileSidebarOpen, setIsMobileSidebarOpen] = useState(false);
+  const [hasAdminPasscode, setHasAdminPasscode] = useState(false);
+  const [isAdminModalOpen, setIsAdminModalOpen] = useState(false);
+  const [adminPasscodeInput, setAdminPasscodeInput] = useState("");
+  const [adminModalNotice, setAdminModalNotice] = useState<string | null>(null);
+  const [pendingAdminAction, setPendingAdminAction] = useState<
+    | { type: "upload"; file: File }
+    | { type: "delete"; filename: string }
+    | null
+  >(null);
 
   const chatEndRef = useRef<HTMLDivElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
@@ -75,6 +87,7 @@ export default function RagWorkspace() {
   useEffect(() => {
     loadDocs();
     loadSessions();
+    setHasAdminPasscode(Boolean(getStoredAdminPasscode()));
   }, []);
 
   useEffect(() => {
@@ -119,6 +132,13 @@ export default function RagWorkspace() {
       });
       await loadDocs();
     } catch (err: unknown) {
+      if (err instanceof AdminAuthError) {
+        setPendingAdminAction({ type: "upload", file });
+        setAdminModalNotice(err.message);
+        setAdminPasscodeInput(getStoredAdminPasscode());
+        setIsAdminModalOpen(true);
+        return;
+      }
       const message = err instanceof Error ? err.message : "Upload gagal";
       setUploadStatus({ type: "error", text: message });
     } finally {
@@ -138,11 +158,49 @@ export default function RagWorkspace() {
       });
       await loadDocs();
     } catch (err: unknown) {
+      if (err instanceof AdminAuthError) {
+        setPendingAdminAction({ type: "delete", filename });
+        setAdminModalNotice(err.message);
+        setAdminPasscodeInput(getStoredAdminPasscode());
+        setIsAdminModalOpen(true);
+        return;
+      }
       const message = err instanceof Error ? err.message : "Gagal menghapus dokumen";
       setUploadStatus({ type: "error", text: message });
     } finally {
       setDeletingFilename(null);
     }
+  };
+
+  const handleOpenAdminModal = () => {
+    setAdminPasscodeInput(getStoredAdminPasscode());
+    setAdminModalNotice(null);
+    setPendingAdminAction(null);
+    setIsAdminModalOpen(true);
+  };
+
+  const handleSaveAdminPasscode = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setStoredAdminPasscode(adminPasscodeInput);
+    setHasAdminPasscode(Boolean(adminPasscodeInput.trim()));
+    setIsAdminModalOpen(false);
+    setAdminModalNotice(null);
+
+    const action = pendingAdminAction;
+    setPendingAdminAction(null);
+    if (action?.type === "upload") {
+      await handleFileUpload(action.file);
+    } else if (action?.type === "delete") {
+      await handleDeleteDocument(action.filename);
+    }
+  };
+
+  const handleClearAdminPasscode = () => {
+    setStoredAdminPasscode("");
+    setAdminPasscodeInput("");
+    setHasAdminPasscode(false);
+    setPendingAdminAction(null);
+    setIsAdminModalOpen(false);
   };
 
   const handleSelectSession = async (sessionId: string) => {
@@ -280,6 +338,8 @@ export default function RagWorkspace() {
           onNewChat={handleNewChat}
           onSelectSession={handleSelectSession}
           onDeleteSession={handleDeleteSession}
+          hasAdminPasscode={hasAdminPasscode}
+          onOpenAdminModal={handleOpenAdminModal}
           isOpenMobile={isMobileSidebarOpen}
           onCloseMobile={() => setIsMobileSidebarOpen(false)}
         />
@@ -360,6 +420,80 @@ export default function RagWorkspace() {
           </p>
         </div>
       </main>
+
+      {/* Modal Admin Passcode */}
+      {isAdminModalOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-sm">
+          <div className="w-full max-w-sm rounded-2xl bg-slate-900 border border-slate-800 p-5 shadow-2xl animate-fade-in-up">
+            <div className="flex items-center justify-between mb-3">
+              <div className="flex items-center gap-2">
+                <div className="p-1.5 rounded-lg bg-slate-800 border border-slate-700 text-slate-200">
+                  <Lock className="w-4 h-4" />
+                </div>
+                <h2 className="text-sm font-semibold text-white">Admin Mode</h2>
+              </div>
+              <button
+                type="button"
+                onClick={() => {
+                  setIsAdminModalOpen(false);
+                  setPendingAdminAction(null);
+                }}
+                className="p-1 rounded-lg text-slate-400 hover:text-white hover:bg-slate-800 transition cursor-pointer"
+                aria-label="Tutup modal"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+
+            <p className="text-xs text-slate-400 leading-relaxed mb-3">
+              {adminModalNotice ||
+                "Masukkan Admin Passcode untuk mengaktifkan fitur unggah dan hapus dokumen pada mode demo publik."}
+            </p>
+
+            <form onSubmit={handleSaveAdminPasscode} className="space-y-3">
+              <input
+                type="password"
+                value={adminPasscodeInput}
+                onChange={(e) => setAdminPasscodeInput(e.target.value)}
+                placeholder="Masukkan Admin Passcode..."
+                autoFocus
+                className="w-full bg-slate-950 border border-slate-700 rounded-xl px-3.5 py-2.5 text-sm text-slate-100 placeholder-slate-500 focus:outline-none focus:border-indigo-500"
+              />
+              <div className="flex items-center justify-between gap-2 pt-1">
+                {hasAdminPasscode ? (
+                  <button
+                    type="button"
+                    onClick={handleClearAdminPasscode}
+                    className="px-3 py-2 rounded-xl text-xs font-medium text-rose-300 hover:bg-rose-500/10 border border-rose-500/20 transition cursor-pointer"
+                  >
+                    Keluar Admin
+                  </button>
+                ) : (
+                  <span />
+                )}
+                <div className="flex items-center gap-2">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setIsAdminModalOpen(false);
+                      setPendingAdminAction(null);
+                    }}
+                    className="px-3 py-2 rounded-xl text-xs font-medium text-slate-300 hover:bg-slate-800 transition cursor-pointer"
+                  >
+                    Batal
+                  </button>
+                  <button
+                    type="submit"
+                    className="px-4 py-2 rounded-xl bg-slate-100 hover:bg-white text-slate-950 text-xs font-semibold transition cursor-pointer"
+                  >
+                    {pendingAdminAction ? "Simpan & Lanjutkan" : "Simpan"}
+                  </button>
+                </div>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

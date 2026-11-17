@@ -2,6 +2,34 @@ import { PDFDocument } from "pdf-lib";
 
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || "/api/v1";
 const MAX_UPLOAD_BATCH_BYTES = 2 * 1024 * 1024; // 2 MB: PDF > 2 MB dipecah 1 halaman/batch agar cepat & bebas timeout Vercel
+const ADMIN_PASSCODE_STORAGE_KEY = "rag_admin_passcode";
+
+export class AdminAuthError extends Error {
+    constructor(message: string) {
+        super(message);
+        this.name = "AdminAuthError";
+    }
+}
+
+export function getStoredAdminPasscode(): string {
+    if (typeof window === "undefined") return "";
+    return sessionStorage.getItem(ADMIN_PASSCODE_STORAGE_KEY) || "";
+}
+
+export function setStoredAdminPasscode(passcode: string): void {
+    if (typeof window === "undefined") return;
+    const trimmed = passcode.trim();
+    if (trimmed) {
+        sessionStorage.setItem(ADMIN_PASSCODE_STORAGE_KEY, trimmed);
+    } else {
+        sessionStorage.removeItem(ADMIN_PASSCODE_STORAGE_KEY);
+    }
+}
+
+function getAdminHeaders(): Record<string, string> {
+    const passcode = getStoredAdminPasscode();
+    return passcode ? { "x-admin-passcode": passcode } : {};
+}
 
 export interface SourceCitation {
     filename: string;
@@ -61,6 +89,7 @@ async function postUploadBatch(
 
     const res = await fetch(`${API_BASE_URL}/upload`, {
         method: "POST",
+        headers: getAdminHeaders(),
         body: formData,
     });
 
@@ -73,6 +102,9 @@ async function postUploadBatch(
             if (res.status === 504) {
                 detail = "Server timeout saat memproses PDF. Silakan coba lagi atau gunakan file yang lebih ringkas.";
             }
+        }
+        if (res.status === 401) {
+            throw new AdminAuthError(detail);
         }
         throw new Error(detail);
     }
@@ -93,6 +125,7 @@ async function postUploadImagePage(
 
     const res = await fetch(`${API_BASE_URL}/upload`, {
         method: "POST",
+        headers: getAdminHeaders(),
         body: formData,
     });
 
@@ -103,6 +136,9 @@ async function postUploadImagePage(
             if (err?.detail) detail = err.detail;
         } catch {
             // fallback
+        }
+        if (res.status === 401) {
+            throw new AdminAuthError(detail);
         }
         throw new Error(detail);
     }
@@ -117,7 +153,10 @@ async function postUploadExtractedText(
 ) {
     const res = await fetch(`${API_BASE_URL}/upload`, {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: {
+            "Content-Type": "application/json",
+            ...getAdminHeaders(),
+        },
         body: JSON.stringify({
             filename,
             pageNumber,
@@ -133,6 +172,9 @@ async function postUploadExtractedText(
             if (err?.detail) detail = err.detail;
         } catch {
             // fallback
+        }
+        if (res.status === 401) {
+            throw new AdminAuthError(detail);
         }
         throw new Error(detail);
     }
@@ -384,11 +426,16 @@ export interface DeleteDocumentResponse {
 export async function deleteDocument(filename: string): Promise<DeleteDocumentResponse> {
     const res = await fetch(`${API_BASE_URL}/documents/${encodeURIComponent(filename)}`, {
         method: "DELETE",
+        headers: getAdminHeaders(),
     });
 
     if (!res.ok) {
         const err = await res.json().catch(() => ({ detail: "Gagal menghapus dokumen" }));
-        throw new Error(err.detail || "Gagal menghapus dokumen");
+        const detail = err.detail || "Gagal menghapus dokumen";
+        if (res.status === 401) {
+            throw new AdminAuthError(detail);
+        }
+        throw new Error(detail);
     }
     return res.json();
 }

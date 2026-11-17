@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { extractText } from "unpdf";
+import { verifyAdminPasscode } from "@/lib/server/auth";
 import { ensureSchema, getDb } from "@/lib/server/db";
 import { chunkPages } from "@/lib/server/chunker";
 import {
@@ -13,6 +14,9 @@ import { extractImageContentWithGroq } from "@/lib/server/groq";
 export const maxDuration = 60;
 
 export async function POST(req: NextRequest) {
+  const authError = verifyAdminPasscode(req);
+  if (authError) return authError;
+
   try {
     const contentType = req.headers.get("content-type") || "";
     let targetFilename = "";
@@ -191,13 +195,32 @@ export async function POST(req: NextRequest) {
       overwrittenChunks = deletedRows.length;
     }
 
-    for (let i = 0; i < chunks.length; i++) {
-      const chunk = chunks[i];
-      const vecLiteral = JSON.stringify(embeddings[i]);
-      await sql`
-        INSERT INTO document_chunks (filename, page_number, chunk_index, content, embedding)
-        VALUES (${chunk.filename}, ${chunk.page_number}, ${chunk.chunk_index}, ${chunk.content}, ${vecLiteral}::vector);
-      `;
+    // Batch insert multi-row per 50 baris untuk meminimalkan round-trip HTTP ke Neon
+    const INSERT_BATCH_SIZE = 50;
+    for (let start = 0; start < chunks.length; start += INSERT_BATCH_SIZE) {
+      const end = Math.min(start + INSERT_BATCH_SIZE, chunks.length);
+      const valuesClauses: string[] = [];
+      const params: (string | number)[] = [];
+
+      for (let i = start; i < end; i++) {
+        const chunk = chunks[i];
+        const base = (i - start) * 5;
+        valuesClauses.push(
+          `($${base + 1}, $${base + 2}, $${base + 3}, $${base + 4}, $${base + 5}::vector)`
+        );
+        params.push(
+          chunk.filename,
+          chunk.page_number,
+          chunk.chunk_index,
+          chunk.content,
+          JSON.stringify(embeddings[i])
+        );
+      }
+
+      await sql.query(
+        `INSERT INTO document_chunks (filename, page_number, chunk_index, content, embedding) VALUES ${valuesClauses.join(", ")};`,
+        params
+      );
     }
 
     const modeLabel =

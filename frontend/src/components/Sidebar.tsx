@@ -14,6 +14,8 @@ import {
   Plus,
   MessageSquare,
   FolderOpen,
+  Lock,
+  Unlock,
 } from "lucide-react";
 import { ChatSessionItem, DocumentItem } from "../lib/api";
 
@@ -33,6 +35,8 @@ interface SidebarProps {
   onNewChat: () => void;
   onSelectSession: (sessionId: string) => void;
   onDeleteSession: (sessionId: string) => void;
+  hasAdminPasscode: boolean;
+  onOpenAdminModal: () => void;
   isOpenMobile: boolean;
   onCloseMobile: () => void;
 }
@@ -76,6 +80,8 @@ export default function Sidebar({
   onNewChat,
   onSelectSession,
   onDeleteSession,
+  hasAdminPasscode,
+  onOpenAdminModal,
   isOpenMobile,
   onCloseMobile,
 }: SidebarProps) {
@@ -331,14 +337,37 @@ export default function Sidebar({
             />
           </div>
 
-          {/* Section Header with Inline Stats */}
+          {/* Section Header with Inline Stats & Admin Lock */}
           <div className="flex items-center justify-between px-1 pt-0.5">
             <span className="text-[11px] font-medium text-slate-400">
               Terindeks ({filteredDocs.length})
             </span>
-            <span className="text-[11px] text-slate-500">
-              {totalChunks} chunks total
-            </span>
+            <div className="flex items-center gap-2">
+              <span className="text-[11px] text-slate-500">
+                {totalChunks} chunks
+              </span>
+              <button
+                type="button"
+                onClick={onOpenAdminModal}
+                title={
+                  hasAdminPasscode
+                    ? "Admin Mode Aktif (Klik untuk ubah/hapus passcode)"
+                    : "Admin Mode (Masukkan passcode untuk upload/hapus)"
+                }
+                className={`inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] font-medium border transition cursor-pointer ${
+                  hasAdminPasscode
+                    ? "bg-emerald-950/60 text-emerald-300 border-emerald-800/60"
+                    : "bg-slate-900 text-slate-400 hover:text-slate-200 border-slate-800"
+                }`}
+              >
+                {hasAdminPasscode ? (
+                  <Unlock className="w-2.5 h-2.5" />
+                ) : (
+                  <Lock className="w-2.5 h-2.5" />
+                )}
+                <span>Admin</span>
+              </button>
+            </div>
           </div>
 
           {/* Document List */}

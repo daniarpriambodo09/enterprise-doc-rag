@@ -1,5 +1,6 @@
 import json
 import os
+import re
 import sys
 import time
 from pathlib import Path
@@ -34,6 +35,39 @@ Respond ONLY with a valid JSON object using this exact schema:
 {"score": <float between 0.0 and 1.0>, "reason": "<concise 1-sentence explanation>"}"""
 
 
+def parse_judge_response(raw_text: str) -> Dict:
+    """Ekstrak JSON dari respons LLM Judge secara toleran terhadap markdown fence atau teks pengantar."""
+    cleaned = raw_text.strip()
+    match = re.search(r"\{.*\}", cleaned, re.DOTALL)
+    if match:
+        try:
+            parsed = json.loads(match.group(0))
+            score = float(parsed.get("score", 0.0))
+            score = max(0.0, min(1.0, score))
+            return {
+                "score": round(score, 3),
+                "reason": str(parsed.get("reason", "Evaluated by LLM Judge.")),
+            }
+        except (json.JSONDecodeError, ValueError, TypeError):
+            pass
+
+    # Fallback: ekstrak nilai numerik skor jika format JSON sedikit meleset
+    score_match = re.search(
+        r'"?score"?\s*[:=]\s*([01](?:\.\d+)?)', cleaned, re.IGNORECASE
+    )
+    if not score_match:
+        score_match = re.search(r"\b([01](?:\.\d+)?)\b", cleaned)
+
+    if score_match:
+        score = max(0.0, min(1.0, float(score_match.group(1))))
+        return {
+            "score": round(score, 3),
+            "reason": "Parsed score via regex fallback from LLM Judge output.",
+        }
+
+    return {"score": 0.0, "reason": f"Unparseable judge output: {cleaned[:120]}"}
+
+
 def evaluate_faithfulness(question: str, context_chunks: List[Dict], answer: str) -> Dict:
     """Menggunakan LLM-as-a-Judge (Groq) untuk menilai kesetiaan jawaban terhadap konteks."""
     if not context_chunks:
@@ -64,17 +98,10 @@ AI Answer:
                 {"role": "user", "content": prompt},
             ],
             temperature=0.0,
-            max_completion_tokens=300,
-            response_format={"type": "json_object"},
+            max_completion_tokens=1024,
         )
-        raw = completion.choices[0].message.content or "{}"
-        parsed = json.loads(raw)
-        score = float(parsed.get("score", 0.0))
-        score = max(0.0, min(1.0, score))
-        return {
-            "score": round(score, 3),
-            "reason": parsed.get("reason", "Evaluated by LLM Judge."),
-        }
+        raw = completion.choices[0].message.content or ""
+        return parse_judge_response(raw)
     except Exception as exc:
         return {"score": 0.0, "reason": f"Judge error: {exc}"}
 

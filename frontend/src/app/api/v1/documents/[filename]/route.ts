@@ -1,10 +1,14 @@
 import { NextRequest, NextResponse } from "next/server";
+import { verifyAdminPasscode } from "@/lib/server/auth";
 import { ensureSchema, getDb } from "@/lib/server/db";
 
 export async function DELETE(
-  _req: NextRequest,
+  req: NextRequest,
   context: { params: Promise<{ filename: string }> }
 ) {
+  const authError = verifyAdminPasscode(req);
+  if (authError) return authError;
+
   try {
     const { filename: rawFilename } = await context.params;
     const filename = decodeURIComponent(rawFilename);
