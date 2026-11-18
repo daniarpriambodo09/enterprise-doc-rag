@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { extractText } from "unpdf";
-import { verifyAdminPasscode } from "@/lib/server/auth";
+import { getCurrentActor, hasValidAdminPasscode } from "@/lib/server/auth";
 import { ensureSchema, getDb } from "@/lib/server/db";
 import { chunkPages } from "@/lib/server/chunker";
 import {
@@ -14,8 +14,23 @@ import { extractImageContentWithGroq } from "@/lib/server/groq";
 export const maxDuration = 60;
 
 export async function POST(req: NextRequest) {
-  const authError = verifyAdminPasscode(req);
-  if (authError) return authError;
+  const actor = await getCurrentActor(req);
+  const isAdminPass = hasValidAdminPasscode(req);
+  const isAdmin =
+    isAdminPass || (actor.type === "user" && actor.role === "admin");
+
+  if (actor.type === "guest" && !isAdminPass) {
+    return NextResponse.json(
+      {
+        detail:
+          "Mode Demo Publik: Masuk ke akun Anda untuk mengunggah dokumen pribadi, atau masukkan Admin Passcode.",
+      },
+      { status: 401 }
+    );
+  }
+
+  const ownerId = isAdmin ? "public" : actor.id;
+  const isPublic = isAdmin;
 
   try {
     const contentType = req.headers.get("content-type") || "";
@@ -184,12 +199,14 @@ export async function POST(req: NextRequest) {
     await ensureSchema();
     const sql = getDb();
 
-    // Anti-duplikasi: hanya hapus chunk lama pada batch pertama
+    // Anti-duplikasi: hanya hapus chunk lama milik owner yang sama pada batch pertama
     let overwrittenChunks = 0;
     if (isFirstBatch) {
       const deletedRows = await sql`
         DELETE FROM document_chunks
         WHERE filename = ${targetFilename}
+          AND owner_id = ${ownerId}
+          AND is_public = ${isPublic}
         RETURNING id;
       `;
       overwrittenChunks = deletedRows.length;
@@ -200,25 +217,27 @@ export async function POST(req: NextRequest) {
     for (let start = 0; start < chunks.length; start += INSERT_BATCH_SIZE) {
       const end = Math.min(start + INSERT_BATCH_SIZE, chunks.length);
       const valuesClauses: string[] = [];
-      const params: (string | number)[] = [];
+      const params: (string | number | boolean)[] = [];
 
       for (let i = start; i < end; i++) {
         const chunk = chunks[i];
-        const base = (i - start) * 5;
+        const base = (i - start) * 7;
         valuesClauses.push(
-          `($${base + 1}, $${base + 2}, $${base + 3}, $${base + 4}, $${base + 5}::vector)`
+          `($${base + 1}, $${base + 2}, $${base + 3}, $${base + 4}, $${base + 5}::vector, $${base + 6}, $${base + 7})`
         );
         params.push(
           chunk.filename,
           chunk.page_number,
           chunk.chunk_index,
           chunk.content,
-          JSON.stringify(embeddings[i])
+          JSON.stringify(embeddings[i]),
+          ownerId,
+          isPublic
         );
       }
 
       await sql.query(
-        `INSERT INTO document_chunks (filename, page_number, chunk_index, content, embedding) VALUES ${valuesClauses.join(", ")};`,
+        `INSERT INTO document_chunks (filename, page_number, chunk_index, content, embedding, owner_id, is_public) VALUES ${valuesClauses.join(", ")};`,
         params
       );
     }

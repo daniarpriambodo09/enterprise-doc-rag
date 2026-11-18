@@ -33,6 +33,17 @@ export async function ensureSchema() {
   await sql`CREATE EXTENSION IF NOT EXISTS vector;`;
 
   await sql`
+    CREATE TABLE IF NOT EXISTS users (
+      id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+      name TEXT NOT NULL,
+      email TEXT UNIQUE NOT NULL,
+      password_hash TEXT NOT NULL,
+      role TEXT NOT NULL DEFAULT 'user',
+      created_at TIMESTAMPTZ DEFAULT NOW()
+    );
+  `;
+
+  await sql`
     CREATE TABLE IF NOT EXISTS document_chunks (
       id SERIAL PRIMARY KEY,
       filename TEXT NOT NULL,
@@ -40,8 +51,20 @@ export async function ensureSchema() {
       chunk_index INTEGER NOT NULL,
       content TEXT NOT NULL,
       embedding vector(768),
+      owner_id TEXT NOT NULL DEFAULT 'public',
+      is_public BOOLEAN NOT NULL DEFAULT TRUE,
       created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
     );
+  `;
+
+  await sql`
+    ALTER TABLE document_chunks
+    ADD COLUMN IF NOT EXISTS owner_id TEXT NOT NULL DEFAULT 'public';
+  `;
+
+  await sql`
+    ALTER TABLE document_chunks
+    ADD COLUMN IF NOT EXISTS is_public BOOLEAN NOT NULL DEFAULT TRUE;
   `;
 
   await sql`
@@ -50,12 +73,28 @@ export async function ensureSchema() {
   `;
 
   await sql`
+    CREATE INDEX IF NOT EXISTS document_chunks_owner_idx
+    ON document_chunks (owner_id, is_public, filename);
+  `;
+
+  await sql`
     CREATE TABLE IF NOT EXISTS chat_sessions (
       id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
       title TEXT NOT NULL,
+      owner_id TEXT NOT NULL DEFAULT 'legacy',
       created_at TIMESTAMPTZ DEFAULT NOW(),
       updated_at TIMESTAMPTZ DEFAULT NOW()
     );
+  `;
+
+  await sql`
+    ALTER TABLE chat_sessions
+    ADD COLUMN IF NOT EXISTS owner_id TEXT NOT NULL DEFAULT 'legacy';
+  `;
+
+  await sql`
+    CREATE INDEX IF NOT EXISTS chat_sessions_owner_idx
+    ON chat_sessions (owner_id, updated_at DESC);
   `;
 
   await sql`

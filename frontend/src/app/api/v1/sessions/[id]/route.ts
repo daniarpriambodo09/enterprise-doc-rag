@@ -1,11 +1,12 @@
 import { NextRequest, NextResponse } from "next/server";
+import { getCurrentActor } from "@/lib/server/auth";
 import { ensureSchema, getDb } from "@/lib/server/db";
 
 const UUID_REGEX =
   /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
 export async function GET(
-  _req: NextRequest,
+  req: NextRequest,
   context: { params: Promise<{ id: string }> }
 ) {
   try {
@@ -18,12 +19,13 @@ export async function GET(
     }
 
     await ensureSchema();
+    const actor = await getCurrentActor(req);
     const sql = getDb();
 
     const sessionRows = await sql`
       SELECT id, title, created_at, updated_at
       FROM chat_sessions
-      WHERE id = ${id}::uuid;
+      WHERE id = ${id}::uuid AND owner_id = ${actor.id};
     `;
 
     if (sessionRows.length === 0) {
@@ -65,7 +67,7 @@ export async function GET(
 }
 
 export async function DELETE(
-  _req: NextRequest,
+  req: NextRequest,
   context: { params: Promise<{ id: string }> }
 ) {
   try {
@@ -78,11 +80,12 @@ export async function DELETE(
     }
 
     await ensureSchema();
+    const actor = await getCurrentActor(req);
     const sql = getDb();
 
     const deletedRows = await sql`
       DELETE FROM chat_sessions
-      WHERE id = ${id}::uuid
+      WHERE id = ${id}::uuid AND owner_id = ${actor.id}
       RETURNING id;
     `;
 

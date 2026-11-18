@@ -3,12 +3,27 @@ import { PDFDocument } from "pdf-lib";
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || "/api/v1";
 const MAX_UPLOAD_BATCH_BYTES = 2 * 1024 * 1024; // 2 MB: PDF > 2 MB dipecah 1 halaman/batch agar cepat & bebas timeout Vercel
 const ADMIN_PASSCODE_STORAGE_KEY = "rag_admin_passcode";
+const GUEST_ID_STORAGE_KEY = "tanyadoc_guest_id";
 
 export class AdminAuthError extends Error {
     constructor(message: string) {
         super(message);
         this.name = "AdminAuthError";
     }
+}
+
+export function getOrCreateGuestId(): string {
+    if (typeof window === "undefined") return "";
+    let guestId = localStorage.getItem(GUEST_ID_STORAGE_KEY) || "";
+    if (!/^guest_[a-zA-Z0-9_-]{8,80}$/.test(guestId)) {
+        const uuid =
+            typeof crypto !== "undefined" && typeof crypto.randomUUID === "function"
+                ? crypto.randomUUID()
+                : `${Date.now()}-${Math.random().toString(36).slice(2, 12)}`;
+        guestId = `guest_${uuid}`;
+        localStorage.setItem(GUEST_ID_STORAGE_KEY, guestId);
+    }
+    return guestId;
 }
 
 export function getStoredAdminPasscode(): string {
@@ -26,9 +41,24 @@ export function setStoredAdminPasscode(passcode: string): void {
     }
 }
 
+function getGuestHeaders(): Record<string, string> {
+    const guestId = getOrCreateGuestId();
+    return guestId ? { "x-guest-id": guestId } : {};
+}
+
 function getAdminHeaders(): Record<string, string> {
     const passcode = getStoredAdminPasscode();
-    return passcode ? { "x-admin-passcode": passcode } : {};
+    return {
+        ...getGuestHeaders(),
+        ...(passcode ? { "x-admin-passcode": passcode } : {}),
+    };
+}
+
+export interface UserProfile {
+    id: string;
+    name: string;
+    email: string;
+    role: "admin" | "user";
 }
 
 export interface SourceCitation {
@@ -48,6 +78,8 @@ export interface DocumentItem {
     filename: string;
     total_chunks: number;
     uploaded_at: string;
+    is_public?: boolean;
+    can_delete?: boolean;
 }
 
 export interface ChatSessionItem {
@@ -71,7 +103,9 @@ export interface SessionDetailResponse {
 }
 
 export async function fetchDocuments(): Promise<DocumentItem[]> {
-    const res = await fetch(`${API_BASE_URL}/documents`);
+    const res = await fetch(`${API_BASE_URL}/documents`, {
+        headers: getAdminHeaders(),
+    });
     if (!res.ok) throw new Error("Gagal mengambil daftar dokumen");
     return res.json();
 }
@@ -404,7 +438,10 @@ export async function sendChatQuery(
 ): Promise<ChatResponse> {
     const res = await fetch(`${API_BASE_URL}/chat`, {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: {
+            "Content-Type": "application/json",
+            ...getGuestHeaders(),
+        },
         body: JSON.stringify({
             query,
             top_k: topK,
@@ -441,13 +478,17 @@ export async function deleteDocument(filename: string): Promise<DeleteDocumentRe
 }
 
 export async function fetchSessions(): Promise<ChatSessionItem[]> {
-    const res = await fetch(`${API_BASE_URL}/sessions`);
+    const res = await fetch(`${API_BASE_URL}/sessions`, {
+        headers: getGuestHeaders(),
+    });
     if (!res.ok) throw new Error("Gagal mengambil riwayat percakapan");
     return res.json();
 }
 
 export async function fetchSessionDetail(sessionId: string): Promise<SessionDetailResponse> {
-    const res = await fetch(`${API_BASE_URL}/sessions/${encodeURIComponent(sessionId)}`);
+    const res = await fetch(`${API_BASE_URL}/sessions/${encodeURIComponent(sessionId)}`, {
+        headers: getGuestHeaders(),
+    });
     if (!res.ok) throw new Error("Gagal memuat detail sesi percakapan");
     return res.json();
 }
@@ -455,6 +496,61 @@ export async function fetchSessionDetail(sessionId: string): Promise<SessionDeta
 export async function deleteSession(sessionId: string): Promise<void> {
     const res = await fetch(`${API_BASE_URL}/sessions/${encodeURIComponent(sessionId)}`, {
         method: "DELETE",
+        headers: getGuestHeaders(),
     });
     if (!res.ok) throw new Error("Gagal menghapus sesi percakapan");
+}
+
+export async function fetchCurrentUser(): Promise<UserProfile | null> {
+    const res = await fetch(`${API_BASE_URL}/auth/me`, {
+        headers: getGuestHeaders(),
+    });
+    if (!res.ok) return null;
+    const data = await res.json();
+    return data?.user ?? null;
+}
+
+export async function registerUser(payload: {
+    name: string;
+    email: string;
+    password: string;
+}): Promise<UserProfile> {
+    const res = await fetch(`${API_BASE_URL}/auth/register`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+            ...payload,
+            guestId: getOrCreateGuestId(),
+        }),
+    });
+    const data = await res.json().catch(() => ({}));
+    if (!res.ok) {
+        throw new Error(data?.detail || "Gagal mendaftarkan akun.");
+    }
+    return data.user;
+}
+
+export async function loginUser(payload: {
+    email: string;
+    password: string;
+}): Promise<UserProfile> {
+    const res = await fetch(`${API_BASE_URL}/auth/login`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+            ...payload,
+            guestId: getOrCreateGuestId(),
+        }),
+    });
+    const data = await res.json().catch(() => ({}));
+    if (!res.ok) {
+        throw new Error(data?.detail || "Email atau password salah.");
+    }
+    return data.user;
+}
+
+export async function logoutUser(): Promise<void> {
+    await fetch(`${API_BASE_URL}/auth/logout`, {
+        method: "POST",
+    });
 }

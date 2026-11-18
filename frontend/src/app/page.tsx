@@ -10,16 +10,21 @@ import {
   fetchSessions,
   fetchSessionDetail,
   deleteSession,
+  fetchCurrentUser,
+  logoutUser,
   AdminAuthError,
+  getOrCreateGuestId,
   getStoredAdminPasscode,
   setStoredAdminPasscode,
   DocumentItem,
   ChatSessionItem,
+  UserProfile,
 } from "../lib/api";
 import Sidebar from "../components/Sidebar";
 import Header from "../components/Header";
 import ChatMessage, { ChatMessageData } from "../components/ChatMessage";
 import EmptyState from "../components/EmptyState";
+import AuthModal from "../components/AuthModal";
 
 function formatTimeLabel(dateInput?: string) {
   const date = dateInput ? new Date(dateInput) : new Date();
@@ -53,6 +58,8 @@ export default function RagWorkspace() {
     text: string;
   } | null>(null);
   const [isMobileSidebarOpen, setIsMobileSidebarOpen] = useState(false);
+  const [currentUser, setCurrentUser] = useState<UserProfile | null>(null);
+  const [isAuthModalOpen, setIsAuthModalOpen] = useState(false);
   const [hasAdminPasscode, setHasAdminPasscode] = useState(false);
   const [isAdminModalOpen, setIsAdminModalOpen] = useState(false);
   const [adminPasscodeInput, setAdminPasscodeInput] = useState("");
@@ -85,9 +92,11 @@ export default function RagWorkspace() {
   };
 
   useEffect(() => {
+    getOrCreateGuestId();
+    setHasAdminPasscode(Boolean(getStoredAdminPasscode()));
+    fetchCurrentUser().then((user) => setCurrentUser(user));
     loadDocs();
     loadSessions();
-    setHasAdminPasscode(Boolean(getStoredAdminPasscode()));
   }, []);
 
   useEffect(() => {
@@ -201,6 +210,28 @@ export default function RagWorkspace() {
     setHasAdminPasscode(false);
     setPendingAdminAction(null);
     setIsAdminModalOpen(false);
+    loadDocs();
+  };
+
+  const handleAuthSuccess = async (user: UserProfile) => {
+    setCurrentUser(user);
+    await Promise.all([loadDocs(), loadSessions()]);
+    const action = pendingAdminAction;
+    setPendingAdminAction(null);
+    setIsAdminModalOpen(false);
+    if (action?.type === "upload") {
+      await handleFileUpload(action.file);
+    } else if (action?.type === "delete") {
+      await handleDeleteDocument(action.filename);
+    }
+  };
+
+  const handleLogout = async () => {
+    await logoutUser();
+    setCurrentUser(null);
+    setActiveSessionId(null);
+    setMessages([]);
+    await Promise.all([loadDocs(), loadSessions()]);
   };
 
   const handleSelectSession = async (sessionId: string) => {
@@ -351,6 +382,9 @@ export default function RagWorkspace() {
           onOpenMobileSidebar={() => setIsMobileSidebarOpen(true)}
           onClearChat={handleNewChat}
           hasMessages={messages.length > 0}
+          user={currentUser}
+          onOpenAuthModal={() => setIsAuthModalOpen(true)}
+          onLogout={handleLogout}
         />
 
         {/* Messages Feed */}
@@ -478,6 +512,16 @@ export default function RagWorkspace() {
                     type="button"
                     onClick={() => {
                       setIsAdminModalOpen(false);
+                      setIsAuthModalOpen(true);
+                    }}
+                    className="px-3 py-2 rounded-xl text-xs font-medium text-indigo-600 hover:bg-indigo-50 dark:text-indigo-400 dark:hover:bg-indigo-950/50 transition cursor-pointer"
+                  >
+                    Masuk / Daftar
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setIsAdminModalOpen(false);
                       setPendingAdminAction(null);
                     }}
                     className="px-3 py-2 rounded-xl text-xs font-medium text-slate-600 hover:bg-slate-100 dark:text-slate-300 dark:hover:bg-slate-800 transition cursor-pointer"
@@ -496,6 +540,13 @@ export default function RagWorkspace() {
           </div>
         </div>
       )}
+
+      {/* Modal Login & Register */}
+      <AuthModal
+        isOpen={isAuthModalOpen}
+        onClose={() => setIsAuthModalOpen(false)}
+        onAuthSuccess={handleAuthSuccess}
+      />
     </div>
   );
 }

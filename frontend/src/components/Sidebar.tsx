@@ -379,6 +379,8 @@ export default function Sidebar({
                 {filteredDocs.map((doc, idx) => {
                   const isDeleting = deletingFilename === doc.filename;
                   const isConfirming = confirmDeleteFile === doc.filename;
+                  const canDelete = doc.can_delete !== false;
+                  const isPublic = doc.is_public !== false;
 
                   return (
                     <li
@@ -396,43 +398,54 @@ export default function Sidebar({
                               {doc.filename}
                             </p>
 
-                            {isDeleting ? (
-                              <Loader2 className="w-3.5 h-3.5 text-rose-500 dark:text-rose-400 animate-spin shrink-0" />
-                            ) : isConfirming ? (
-                              <div className="flex items-center gap-1 shrink-0">
+                            {canDelete && (
+                              isDeleting ? (
+                                <Loader2 className="w-3.5 h-3.5 text-rose-500 dark:text-rose-400 animate-spin shrink-0" />
+                              ) : isConfirming ? (
+                                <div className="flex items-center gap-1 shrink-0">
+                                  <button
+                                    type="button"
+                                    onClick={() => {
+                                      setConfirmDeleteFile(null);
+                                      onDeleteDocument(doc.filename);
+                                    }}
+                                    className="p-0.5 rounded bg-rose-50 text-rose-700 hover:bg-rose-100 border border-rose-200 dark:bg-rose-500/20 dark:text-rose-300 dark:hover:bg-rose-500/35 dark:border-rose-500/30 transition cursor-pointer"
+                                    title="Konfirmasi hapus"
+                                  >
+                                    <Check className="w-3 h-3" />
+                                  </button>
+                                  <button
+                                    type="button"
+                                    onClick={() => setConfirmDeleteFile(null)}
+                                    className="p-0.5 rounded bg-slate-200 text-slate-700 hover:bg-slate-300 dark:bg-slate-800 dark:text-slate-300 dark:hover:bg-slate-700 transition cursor-pointer"
+                                    title="Batal"
+                                  >
+                                    <X className="w-3 h-3" />
+                                  </button>
+                                </div>
+                              ) : (
                                 <button
                                   type="button"
-                                  onClick={() => {
-                                    setConfirmDeleteFile(null);
-                                    onDeleteDocument(doc.filename);
-                                  }}
-                                  className="p-0.5 rounded bg-rose-50 text-rose-700 hover:bg-rose-100 border border-rose-200 dark:bg-rose-500/20 dark:text-rose-300 dark:hover:bg-rose-500/35 dark:border-rose-500/30 transition cursor-pointer"
-                                  title="Konfirmasi hapus"
+                                  onClick={() => setConfirmDeleteFile(doc.filename)}
+                                  className="p-1 rounded text-slate-400 hover:text-rose-600 hover:bg-rose-50 dark:text-slate-500 dark:hover:text-rose-400 dark:hover:bg-rose-500/10 opacity-0 group-hover:opacity-100 focus:opacity-100 transition shrink-0 cursor-pointer"
+                                  title={`Hapus ${doc.filename}`}
                                 >
-                                  <Check className="w-3 h-3" />
+                                  <Trash2 className="w-3.5 h-3.5" />
                                 </button>
-                                <button
-                                  type="button"
-                                  onClick={() => setConfirmDeleteFile(null)}
-                                  className="p-0.5 rounded bg-slate-200 text-slate-700 hover:bg-slate-300 dark:bg-slate-800 dark:text-slate-300 dark:hover:bg-slate-700 transition cursor-pointer"
-                                  title="Batal"
-                                >
-                                  <X className="w-3 h-3" />
-                                </button>
-                              </div>
-                            ) : (
-                              <button
-                                type="button"
-                                onClick={() => setConfirmDeleteFile(doc.filename)}
-                                className="p-1 rounded text-slate-400 hover:text-rose-600 hover:bg-rose-50 dark:text-slate-500 dark:hover:text-rose-400 dark:hover:bg-rose-500/10 opacity-0 group-hover:opacity-100 focus:opacity-100 transition shrink-0 cursor-pointer"
-                                title={`Hapus ${doc.filename}`}
-                              >
-                                <Trash2 className="w-3.5 h-3.5" />
-                              </button>
+                              )
                             )}
                           </div>
 
-                          <div className="flex items-center gap-2 mt-0.5 text-[10px] text-slate-500">
+                          <div className="flex items-center gap-1.5 mt-0.5 text-[10px] text-slate-500 flex-wrap">
+                            <span
+                              className={`px-1.5 py-0 rounded text-[9px] font-medium border ${
+                                isPublic
+                                  ? "bg-slate-100 text-slate-600 border-slate-200 dark:bg-slate-800 dark:text-slate-400 dark:border-slate-700"
+                                  : "bg-indigo-50 text-indigo-700 border-indigo-200 dark:bg-indigo-950/60 dark:text-indigo-300 dark:border-indigo-800/60"
+                              }`}
+                            >
+                              {isPublic ? "Publik" : "Pribadi"}
+                            </span>
                             <span>{doc.total_chunks} chunks</span>
                             {isConfirming ? (
                               <span className="text-rose-600 dark:text-rose-400 font-medium">

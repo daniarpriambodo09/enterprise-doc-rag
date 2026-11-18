@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import Groq from "groq-sdk";
+import { getCurrentActor } from "@/lib/server/auth";
 import { ensureSchema, getDb } from "@/lib/server/db";
 import { getEmbedding } from "@/lib/server/gemini";
 
@@ -39,13 +40,15 @@ export async function POST(req: NextRequest) {
     }
 
     await ensureSchema();
+    const actor = await getCurrentActor(req);
     const sql = getDb();
 
-    // 1. Pastikan sesi percakapan tersedia atau buat sesi baru
+    // 1. Pastikan sesi percakapan tersedia & milik actor saat ini, atau buat sesi baru
     let activeSessionId: string | null = null;
     if (requestedSessionId) {
       const existing = await sql`
-        SELECT id FROM chat_sessions WHERE id = ${requestedSessionId}::uuid;
+        SELECT id FROM chat_sessions
+        WHERE id = ${requestedSessionId}::uuid AND owner_id = ${actor.id};
       `;
       if (existing.length > 0) {
         activeSessionId = String(existing[0].id);
@@ -56,8 +59,8 @@ export async function POST(req: NextRequest) {
       const cleanTitle =
         query.length > 45 ? `${query.slice(0, 45).trimEnd()}...` : query;
       const insertedSession = await sql`
-        INSERT INTO chat_sessions (title)
-        VALUES (${cleanTitle})
+        INSERT INTO chat_sessions (title, owner_id)
+        VALUES (${cleanTitle}, ${actor.id})
         RETURNING id;
       `;
       activeSessionId = String(insertedSession[0].id);
@@ -98,6 +101,7 @@ export async function POST(req: NextRequest) {
           (1 - (embedding <=> ${vecLiteral}::vector))::float AS vector_score,
           ts_rank(to_tsvector('simple', content), plainto_tsquery('simple', ${query}))::float AS lexical_score
         FROM document_chunks
+        WHERE (is_public = TRUE OR owner_id = ${actor.id})
         ORDER BY embedding <=> ${vecLiteral}::vector
         LIMIT 15
       ),

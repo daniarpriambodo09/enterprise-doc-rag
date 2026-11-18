@@ -1,15 +1,18 @@
-import { connection, NextResponse } from "next/server";
+import { connection, NextRequest, NextResponse } from "next/server";
+import { getCurrentActor } from "@/lib/server/auth";
 import { ensureSchema, getDb } from "@/lib/server/db";
 
-export async function GET() {
+export async function GET(req: NextRequest) {
   await connection();
   try {
     await ensureSchema();
+    const actor = await getCurrentActor(req);
     const sql = getDb();
 
     const rows = await sql`
       SELECT id, title, created_at, updated_at
       FROM chat_sessions
+      WHERE owner_id = ${actor.id}
       ORDER BY updated_at DESC;
     `;
 
