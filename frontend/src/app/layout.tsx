@@ -14,7 +14,7 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "Enterprise Doc RAG — Daniar Priambodo",
+  title: "TanyaDoc — Analisis Dokumen PDF oleh Daniar Priambodo",
   description:
     "Asisten analisis dokumen perusahaan berbasis Hybrid Search, pgvector, dan LLM dengan sitasi halaman akurat. Portfolio by Daniar Priambodo.",
   authors: [{ name: "Daniar Priambodo" }],
