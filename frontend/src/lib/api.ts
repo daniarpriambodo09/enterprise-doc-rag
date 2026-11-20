@@ -56,8 +56,7 @@ function getAdminHeaders(): Record<string, string> {
 
 export interface UserProfile {
     id: string;
-    name: string;
-    email: string;
+    username: string;
     role: "admin" | "user";
 }
 
@@ -511,8 +510,7 @@ export async function fetchCurrentUser(): Promise<UserProfile | null> {
 }
 
 export async function registerUser(payload: {
-    name: string;
-    email: string;
+    username: string;
     password: string;
 }): Promise<UserProfile> {
     const res = await fetch(`${API_BASE_URL}/auth/register`, {
@@ -531,7 +529,7 @@ export async function registerUser(payload: {
 }
 
 export async function loginUser(payload: {
-    email: string;
+    username: string;
     password: string;
 }): Promise<UserProfile> {
     const res = await fetch(`${API_BASE_URL}/auth/login`, {
@@ -544,7 +542,7 @@ export async function loginUser(payload: {
     });
     const data = await res.json().catch(() => ({}));
     if (!res.ok) {
-        throw new Error(data?.detail || "Email atau password salah.");
+        throw new Error(data?.detail || "Username atau password salah.");
     }
     return data.user;
 }

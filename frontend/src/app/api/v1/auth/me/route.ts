@@ -9,8 +9,7 @@ export async function GET(req: NextRequest) {
     return NextResponse.json({
       user: {
         id: actor.id,
-        name: actor.name,
-        email: actor.email,
+        username: actor.username,
         role: actor.role,
       },
     });

@@ -6,17 +6,18 @@ import { setAuthCookie, signAuthToken } from "@/lib/server/auth";
 export async function POST(req: NextRequest) {
   try {
     const body = await req.json();
-    const email =
-      typeof body?.email === "string" ? body.email.trim().toLowerCase() : "";
+    const username =
+      typeof body?.username === "string" ? body.username.trim().toLowerCase() : "";
     const password = typeof body?.password === "string" ? body.password : "";
     const guestId =
-      typeof body?.guestId === "string" && /^guest_[a-zA-Z0-9_-]{8,80}$/.test(body.guestId.trim())
+      typeof body?.guestId === "string" &&
+      /^guest_[a-zA-Z0-9_-]{8,80}$/.test(body.guestId.trim())
         ? body.guestId.trim()
         : null;
 
-    if (!email || !password) {
+    if (!username || !password) {
       return NextResponse.json(
-        { detail: "Email dan password wajib diisi." },
+        { detail: "Username dan password wajib diisi." },
         { status: 400 }
       );
     }
@@ -25,15 +26,15 @@ export async function POST(req: NextRequest) {
     const sql = getDb();
 
     const rows = await sql`
-      SELECT id, name, email, password_hash, role
+      SELECT id, username, password_hash, role
       FROM users
-      WHERE email = ${email}
+      WHERE LOWER(username) = ${username}
       LIMIT 1;
     `;
 
     if (rows.length === 0) {
       return NextResponse.json(
-        { detail: "Email atau password salah." },
+        { detail: "Username atau password salah." },
         { status: 401 }
       );
     }
@@ -42,7 +43,7 @@ export async function POST(req: NextRequest) {
     const isMatch = await bcrypt.compare(password, String(userRow.password_hash));
     if (!isMatch) {
       return NextResponse.json(
-        { detail: "Email atau password salah." },
+        { detail: "Username atau password salah." },
         { status: 401 }
       );
     }
@@ -61,16 +62,14 @@ export async function POST(req: NextRequest) {
 
     const token = await signAuthToken({
       userId,
-      email: String(userRow.email),
-      name: String(userRow.name),
+      username: String(userRow.username),
       role,
     });
 
     const res = NextResponse.json({
       user: {
         id: userId,
-        name: String(userRow.name),
-        email: String(userRow.email),
+        username: String(userRow.username),
         role,
       },
     });

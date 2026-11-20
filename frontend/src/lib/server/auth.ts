@@ -13,8 +13,7 @@ function getJwtSecret(): Uint8Array {
 
 export interface AuthTokenPayload {
   userId: string;
-  email: string;
-  name: string;
+  username: string;
   role: "admin" | "user";
 }
 
@@ -22,8 +21,7 @@ export type Actor =
   | {
       type: "user";
       id: string;
-      name: string;
-      email: string;
+      username: string;
       role: "admin" | "user";
     }
   | {
@@ -47,8 +45,7 @@ function parseCookieHeader(cookieHeader: string | null, name: string): string {
 export async function signAuthToken(payload: AuthTokenPayload): Promise<string> {
   return new SignJWT({
     userId: payload.userId,
-    email: payload.email,
-    name: payload.name,
+    username: payload.username,
     role: payload.role,
   })
     .setProtectedHeader({ alg: "HS256" })
@@ -64,13 +61,11 @@ export async function verifyAuthToken(
     const { payload } = await jwtVerify(token, getJwtSecret());
     if (
       typeof payload.userId === "string" &&
-      typeof payload.email === "string" &&
-      typeof payload.name === "string"
+      typeof payload.username === "string"
     ) {
       return {
         userId: payload.userId,
-        email: payload.email,
-        name: payload.name,
+        username: payload.username,
         role: payload.role === "admin" ? "admin" : "user",
       };
     }
@@ -90,8 +85,7 @@ export async function getCurrentActor(request: Request): Promise<Actor> {
       return {
         type: "user",
         id: verified.userId,
-        name: verified.name,
-        email: verified.email,
+        username: verified.username,
         role: verified.role,
       };
     }

@@ -35,12 +35,28 @@ export async function ensureSchema() {
   await sql`
     CREATE TABLE IF NOT EXISTS users (
       id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-      name TEXT NOT NULL,
-      email TEXT UNIQUE NOT NULL,
+      username TEXT UNIQUE,
+      name TEXT,
+      email TEXT UNIQUE,
       password_hash TEXT NOT NULL,
       role TEXT NOT NULL DEFAULT 'user',
       created_at TIMESTAMPTZ DEFAULT NOW()
     );
+  `;
+
+  await sql`
+    ALTER TABLE users
+    ADD COLUMN IF NOT EXISTS username TEXT UNIQUE;
+  `;
+
+  await sql`
+    ALTER TABLE users
+    ALTER COLUMN name DROP NOT NULL;
+  `;
+
+  await sql`
+    ALTER TABLE users
+    ALTER COLUMN email DROP NOT NULL;
   `;
 
   await sql`

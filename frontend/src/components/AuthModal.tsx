@@ -16,8 +16,7 @@ export default function AuthModal({
   onAuthSuccess,
 }: AuthModalProps) {
   const [mode, setMode] = useState<"login" | "register">("login");
-  const [name, setName] = useState("");
-  const [email, setEmail] = useState("");
+  const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -31,11 +30,10 @@ export default function AuthModal({
     try {
       const user =
         mode === "login"
-          ? await loginUser({ email, password })
-          : await registerUser({ name, email, password });
+          ? await loginUser({ username, password })
+          : await registerUser({ username, password });
       onAuthSuccess(user);
-      setName("");
-      setEmail("");
+      setUsername("");
       setPassword("");
       onClose();
     } catch (err: unknown) {
@@ -105,8 +103,8 @@ export default function AuthModal({
 
         <p className="text-xs text-slate-600 dark:text-slate-400 mb-3 leading-relaxed">
           {mode === "login"
-            ? "Masuk untuk mengakses dokumen pribadi dan riwayat percakapan Anda."
-            : "Buat akun untuk mengunggah & mengelola dokumen PDF pribadi Anda secara terisolasi."}
+            ? "Masuk dengan username dan password untuk mengakses dokumen pribadi Anda."
+            : "Buat akun cukup dengan username dan password untuk mengunggah dokumen pribadi Anda."}
         </p>
 
         {error && (
@@ -116,32 +114,19 @@ export default function AuthModal({
         )}
 
         <form onSubmit={handleSubmit} className="space-y-3">
-          {mode === "register" && (
-            <div>
-              <label className="block text-[11px] font-medium text-slate-600 dark:text-slate-400 mb-1">
-                Nama Lengkap
-              </label>
-              <input
-                type="text"
-                required
-                value={name}
-                onChange={(e) => setName(e.target.value)}
-                placeholder="Nama Anda"
-                className="w-full bg-slate-50 border border-slate-300 text-slate-900 placeholder-slate-400 dark:bg-slate-950 dark:border-slate-700 rounded-xl px-3.5 py-2 text-sm dark:text-slate-100 dark:placeholder-slate-500 focus:outline-none focus:border-indigo-500"
-              />
-            </div>
-          )}
-
           <div>
             <label className="block text-[11px] font-medium text-slate-600 dark:text-slate-400 mb-1">
-              Email
+              Username
             </label>
             <input
-              type="email"
+              type="text"
               required
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              placeholder="nama@email.com"
+              minLength={3}
+              maxLength={30}
+              value={username}
+              onChange={(e) => setUsername(e.target.value)}
+              placeholder="contoh: daniar_dev"
+              autoFocus
               className="w-full bg-slate-50 border border-slate-300 text-slate-900 placeholder-slate-400 dark:bg-slate-950 dark:border-slate-700 rounded-xl px-3.5 py-2 text-sm dark:text-slate-100 dark:placeholder-slate-500 focus:outline-none focus:border-indigo-500"
             />
           </div>

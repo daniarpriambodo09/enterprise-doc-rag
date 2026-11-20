@@ -3,28 +3,27 @@ import bcrypt from "bcryptjs";
 import { ensureSchema, getDb } from "@/lib/server/db";
 import { setAuthCookie, signAuthToken } from "@/lib/server/auth";
 
+const USERNAME_REGEX = /^[a-zA-Z0-9_.-]{3,30}$/;
+
 export async function POST(req: NextRequest) {
   try {
     const body = await req.json();
-    const name = typeof body?.name === "string" ? body.name.trim() : "";
-    const email =
-      typeof body?.email === "string" ? body.email.trim().toLowerCase() : "";
+    const rawUsername =
+      typeof body?.username === "string" ? body.username.trim() : "";
+    const username = rawUsername.toLowerCase();
     const password = typeof body?.password === "string" ? body.password : "";
     const guestId =
-      typeof body?.guestId === "string" && /^guest_[a-zA-Z0-9_-]{8,80}$/.test(body.guestId.trim())
+      typeof body?.guestId === "string" &&
+      /^guest_[a-zA-Z0-9_-]{8,80}$/.test(body.guestId.trim())
         ? body.guestId.trim()
         : null;
 
-    if (!name || name.length < 2) {
+    if (!USERNAME_REGEX.test(username)) {
       return NextResponse.json(
-        { detail: "Nama minimal 2 karakter." },
-        { status: 400 }
-      );
-    }
-
-    if (!email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
-      return NextResponse.json(
-        { detail: "Format email tidak valid." },
+        {
+          detail:
+            "Username harus 3–30 karakter (huruf, angka, titik, garis bawah, atau strip).",
+        },
         { status: 400 }
       );
     }
@@ -40,25 +39,25 @@ export async function POST(req: NextRequest) {
     const sql = getDb();
 
     const existing = await sql`
-      SELECT id FROM users WHERE email = ${email} LIMIT 1;
+      SELECT id FROM users WHERE LOWER(username) = ${username} LIMIT 1;
     `;
     if (existing.length > 0) {
       return NextResponse.json(
-        { detail: "Email sudah terdaftar. Silakan masuk." },
+        { detail: "Username sudah terdaftar. Silakan gunakan username lain atau masuk." },
         { status: 409 }
       );
     }
 
-    const adminEmail = process.env.ADMIN_EMAIL?.trim().toLowerCase();
+    const adminUsername = process.env.ADMIN_USERNAME?.trim().toLowerCase();
     const role: "admin" | "user" =
-      adminEmail && email === adminEmail ? "admin" : "user";
+      adminUsername && username === adminUsername ? "admin" : "user";
 
     const passwordHash = await bcrypt.hash(password, 10);
 
     const inserted = await sql`
-      INSERT INTO users (name, email, password_hash, role)
-      VALUES (${name}, ${email}, ${passwordHash}, ${role})
-      RETURNING id, name, email, role, created_at;
+      INSERT INTO users (username, name, password_hash, role)
+      VALUES (${username}, ${rawUsername}, ${passwordHash}, ${role})
+      RETURNING id, username, role, created_at;
     `;
 
     const userRow = inserted[0];
@@ -75,16 +74,14 @@ export async function POST(req: NextRequest) {
 
     const token = await signAuthToken({
       userId,
-      email: String(userRow.email),
-      name: String(userRow.name),
+      username: String(userRow.username),
       role,
     });
 
     const res = NextResponse.json({
       user: {
         id: userId,
-        name: String(userRow.name),
-        email: String(userRow.email),
+        username: String(userRow.username),
         role,
       },
     });
