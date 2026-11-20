@@ -77,11 +77,10 @@ export default function AuthModal({
               setMode("login");
               setError(null);
             }}
-            className={`py-1.5 rounded-md text-xs font-medium transition cursor-pointer ${
-              mode === "login"
-                ? "bg-white text-slate-900 shadow-sm dark:bg-slate-800 dark:text-white"
-                : "text-slate-600 hover:text-slate-900 dark:text-slate-400 dark:hover:text-slate-200"
-            }`}
+            className={`py-1.5 rounded-md text-xs font-medium transition cursor-pointer ${mode === "login"
+              ? "bg-white text-slate-900 shadow-sm dark:bg-slate-800 dark:text-white"
+              : "text-slate-600 hover:text-slate-900 dark:text-slate-400 dark:hover:text-slate-200"
+              }`}
           >
             Masuk
           </button>
@@ -91,11 +90,10 @@ export default function AuthModal({
               setMode("register");
               setError(null);
             }}
-            className={`py-1.5 rounded-md text-xs font-medium transition cursor-pointer ${
-              mode === "register"
-                ? "bg-white text-slate-900 shadow-sm dark:bg-slate-800 dark:text-white"
-                : "text-slate-600 hover:text-slate-900 dark:text-slate-400 dark:hover:text-slate-200"
-            }`}
+            className={`py-1.5 rounded-md text-xs font-medium transition cursor-pointer ${mode === "register"
+              ? "bg-white text-slate-900 shadow-sm dark:bg-slate-800 dark:text-white"
+              : "text-slate-600 hover:text-slate-900 dark:text-slate-400 dark:hover:text-slate-200"
+              }`}
           >
             Daftar
           </button>
@@ -125,7 +123,7 @@ export default function AuthModal({
               maxLength={30}
               value={username}
               onChange={(e) => setUsername(e.target.value)}
-              placeholder="contoh: daniar_dev"
+              placeholder="Username"
               autoFocus
               className="w-full bg-slate-50 border border-slate-300 text-slate-900 placeholder-slate-400 dark:bg-slate-950 dark:border-slate-700 rounded-xl px-3.5 py-2 text-sm dark:text-slate-100 dark:placeholder-slate-500 focus:outline-none focus:border-indigo-500"
             />
