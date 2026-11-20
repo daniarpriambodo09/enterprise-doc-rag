@@ -8,15 +8,14 @@ import {
   FileSearch,
   Layers,
   ShieldCheck,
-  Sparkles,
   UserCheck,
 } from "lucide-react";
 import ThemeToggle from "../../components/ThemeToggle";
 
 export const metadata: Metadata = {
-  title: "Tentang TanyaDoc — Enterprise Document RAG by Daniar Priambodo",
+  title: "Tentang TanyaDoc — Asisten Tanya Jawab PDF oleh Daniar Priambodo",
   description:
-    "Informasi arsitektur, teknologi, dan pengembang di balik TanyaDoc (Enterprise Document RAG Workspace) oleh Daniar Priambodo.",
+    "Informasi arsitektur, teknologi, dan pengembang di balik TanyaDoc oleh Daniar Priambodo.",
 };
 
 const PIPELINE_STEPS = [
@@ -91,7 +90,7 @@ export default function AboutPage() {
         <section className="space-y-4">
           <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-white border border-slate-200 text-slate-700 dark:bg-slate-900 dark:border-slate-800 text-xs dark:text-slate-300 shadow-sm">
             <BookOpen className="w-3.5 h-3.5 text-indigo-600 dark:text-indigo-400" />
-            <span>Enterprise Document RAG Workspace</span>
+            <span>Asisten Tanya Jawab Dokumen PDF</span>
           </div>
 
           <h1 className="text-3xl sm:text-4xl font-bold tracking-tight text-slate-900 dark:text-white">
@@ -102,13 +101,13 @@ export default function AboutPage() {
             <strong className="text-slate-900 dark:text-slate-200">
               TanyaDoc
             </strong>{" "}
-            adalah sistem analisis dokumen perusahaan berbasis{" "}
+            adalah aplikasi asisten tanya jawab dokumen PDF berbasis{" "}
             <strong className="text-slate-900 dark:text-slate-200">
               Retrieval-Augmented Generation (RAG)
             </strong>{" "}
-            yang dirancang untuk membaca dokumen PDF kompleks—mulai dari SOP,
-            laporan, spesifikasi teknis, hingga dokumen hasil scan—dan
-            menghasilkan jawaban terstruktur lengkap dengan sitasi halaman yang
+            yang dirancang untuk membaca berbagai jenis PDF—mulai dari materi
+            kuliah, jurnal, CV, panduan, laporan, hingga dokumen hasil scan—dan
+            menghasilkan jawaban terstruktur lengkap dengan rujukan halaman yang
             dapat diverifikasi.
           </p>
         </section>
@@ -173,7 +172,7 @@ export default function AboutPage() {
 
         {/* Creator / Author Card */}
         <section className="p-6 rounded-2xl bg-white dark:bg-slate-900/80 border border-slate-200 dark:border-slate-800 flex flex-col sm:flex-row sm:items-center justify-between gap-6 shadow-sm dark:shadow-none">
-          <div className="space-y-2">
+          <div className="space-y-1.5">
             <div className="inline-flex items-center gap-1.5 text-xs font-medium text-emerald-600 dark:text-emerald-400">
               <UserCheck className="w-3.5 h-3.5" />
               <span>Dikembangkan Oleh</span>
@@ -181,19 +180,12 @@ export default function AboutPage() {
             <h2 className="text-lg font-bold text-slate-900 dark:text-white">
               Daniar Priambodo
             </h2>
-            <p className="text-xs sm:text-sm text-slate-600 dark:text-slate-400 max-w-xl leading-relaxed">
-              Backend &amp; AI/ML Engineer — Mahasiswa S1 Ilmu Data Terapan di
-              Politeknik Elektronika Negeri Surabaya (PENS). Berfokus pada
-              pengembangan sistem RAG, pipeline LLM, dan arsitektur backend
-              scalable.
-            </p>
           </div>
 
           <Link
             href="/"
-            className="inline-flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl bg-slate-900 hover:bg-slate-800 text-white dark:bg-slate-100 dark:hover:bg-white dark:text-slate-950 text-xs font-semibold shrink-0 transition"
+            className="inline-flex items-center justify-center px-4 py-2.5 rounded-xl bg-slate-900 hover:bg-slate-800 text-white dark:bg-slate-100 dark:hover:bg-white dark:text-slate-950 text-xs font-semibold shrink-0 transition"
           >
-            <Sparkles className="w-3.5 h-3.5" />
             <span>Coba TanyaDoc</span>
           </Link>
         </section>

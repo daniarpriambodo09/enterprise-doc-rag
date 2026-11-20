@@ -29,19 +29,19 @@ const ONBOARDING_STEPS = [
 
 const SUGGESTED_PROMPTS = [
   {
-    title: "Ringkasan Eksekutif",
+    title: "Ringkasan Cepat",
     prompt:
-      "Tolong rangkum poin-poin paling penting dari dokumen ini secara singkat dan jelas.",
+      "Tolong rangkum poin-poin paling penting dari dokumen ini secara singkat dan mudah dipahami.",
   },
   {
-    title: "Ekstraksi Tabel & Metrik",
+    title: "Tabel & Poin Penting",
     prompt:
-      "Tolong tampilkan data penting, angka, atau langkah utama dari dokumen ini dalam bentuk tabel yang rapi.",
+      "Tolong susun informasi penting, angka, atau langkah-langkah utama dari dokumen ini dalam bentuk tabel yang rapi.",
   },
   {
-    title: "Audit Kebijakan & SOP",
+    title: "Penjelasan & Detail Isi",
     prompt:
-      "Apa saja aturan penting, batasan, atau prosedur wajib yang perlu diperhatikan di dokumen ini?",
+      "Jelaskan bagian atau istilah penting yang dibahas di dokumen ini beserta rujukan halamannya.",
   },
 ];
 

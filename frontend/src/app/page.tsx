@@ -396,7 +396,7 @@ export default function RagWorkspace() {
               value={input}
               onChange={(e) => setInput(e.target.value)}
               onKeyDown={handleKeyDown}
-              placeholder="Tanyakan isi dokumen, prosedur SOP, tabel, atau grafik... (Enter untuk kirim)"
+              placeholder="Tanyakan apa saja tentang isi dokumen PDF Anda... (Enter untuk kirim)"
               className="flex-1 bg-transparent py-2 text-sm text-slate-900 placeholder-slate-400 dark:text-slate-100 dark:placeholder-slate-500 focus:outline-none resize-none max-h-40 leading-relaxed"
             />
             <button
