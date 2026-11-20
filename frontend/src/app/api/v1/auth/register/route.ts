@@ -22,7 +22,7 @@ export async function POST(req: NextRequest) {
       return NextResponse.json(
         {
           detail:
-            "Username harus 3–30 karakter (huruf, angka, titik, garis bawah, atau strip).",
+            "Username harus 3 sampai 30 karakter (huruf, angka, titik, garis bawah, atau strip).",
         },
         { status: 400 }
       );

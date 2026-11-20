@@ -41,7 +41,7 @@ export default function Header({
             <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-500" />
           </span>
           <span className="text-sm font-semibold text-slate-800 dark:text-slate-200 truncate">
-            TanyaDoc — Asisten Tanya Jawab PDF
+            TanyaDoc: Asisten Tanya Jawab PDF
           </span>
         </div>
       </div>

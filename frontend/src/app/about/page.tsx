@@ -13,7 +13,7 @@ import {
 import ThemeToggle from "../../components/ThemeToggle";
 
 export const metadata: Metadata = {
-  title: "Tentang TanyaDoc — Asisten Tanya Jawab PDF oleh Daniar Priambodo",
+  title: "Tentang TanyaDoc | Asisten Tanya Jawab PDF oleh Daniar Priambodo",
   description:
     "Informasi arsitektur, teknologi, dan pengembang di balik TanyaDoc oleh Daniar Priambodo.",
 };
@@ -105,8 +105,8 @@ export default function AboutPage() {
             <strong className="text-slate-900 dark:text-slate-200">
               Retrieval-Augmented Generation (RAG)
             </strong>{" "}
-            yang dirancang untuk membaca berbagai jenis PDF—mulai dari materi
-            kuliah, jurnal, CV, panduan, laporan, hingga dokumen hasil scan—dan
+            yang dirancang untuk membaca berbagai jenis PDF, mulai dari materi
+            kuliah, jurnal, CV, panduan, laporan, hingga dokumen hasil scan, serta
             menghasilkan jawaban terstruktur lengkap dengan rujukan halaman yang
             dapat diverifikasi.
           </p>
