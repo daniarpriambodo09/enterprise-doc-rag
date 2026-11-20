@@ -131,10 +131,10 @@ export default function RagWorkspace() {
         res.ingestion_mode === "client-ocr"
           ? "OCR Lokal (Tesseract)"
           : res.ingestion_mode === "groq-vision"
-          ? "Groq Vision AI"
-          : res.ingestion_mode === "multimodal"
-          ? "Multimodal AI"
-          : "Ekstraksi Teks";
+            ? "Groq Vision AI"
+            : res.ingestion_mode === "multimodal"
+              ? "Multimodal AI"
+              : "Ekstraksi Teks";
       setUploadStatus({
         type: "success",
         text: `${res.filename} berhasil diindeks (${res.total_chunks} chunks • ${modeText})`,
@@ -397,7 +397,10 @@ export default function RagWorkspace() {
           ) : messages.length === 0 ? (
             <EmptyState
               documentCount={documents.length}
-              onSelectPrompt={(prompt) => submitQuery(prompt)}
+              onSelectPrompt={(prompt) => {
+                setInput(prompt);
+                textareaRef.current?.focus();
+              }}
             />
           ) : (
             messages.map((msg) => <ChatMessage key={msg.id} message={msg} />)
@@ -450,7 +453,7 @@ export default function RagWorkspace() {
             </button>
           </form>
           <p className="max-w-4xl mx-auto text-center text-[11px] text-slate-500 mt-2">
-            Enterprise Doc RAG oleh <span className="text-slate-700 dark:text-slate-300 font-medium">Daniar Priambodo</span> • Sitasi halaman otomatis • Shift + Enter untuk baris baru
+            TanyaDoc oleh <span className="text-slate-700 dark:text-slate-300 font-medium">Daniar Priambodo</span> • Sitasi halaman otomatis • Shift + Enter untuk baris baru
           </p>
         </div>
       </main>

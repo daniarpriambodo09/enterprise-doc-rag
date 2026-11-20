@@ -16,6 +16,7 @@ import {
   FolderOpen,
   Lock,
   Unlock,
+  Info,
 } from "lucide-react";
 import { ChatSessionItem, DocumentItem } from "../lib/api";
 
@@ -135,10 +136,10 @@ export default function Sidebar({
         <div className="flex items-center justify-between gap-2 mb-3">
           <div className="min-w-0">
             <h1 className="font-semibold text-sm text-slate-900 dark:text-slate-100 tracking-tight truncate">
-              Enterprise Doc RAG
+              TanyaDoc
             </h1>
             <p className="text-[11px] text-slate-500 truncate">
-              Daniar Priambodo
+              by Daniar Priambodo
             </p>
           </div>
           <div className="flex items-center gap-1.5 shrink-0">
@@ -338,8 +339,17 @@ export default function Sidebar({
               Terindeks ({filteredDocs.length})
             </span>
             <div className="flex items-center gap-2">
-              <span className="text-[11px] text-slate-500">
-                {totalChunks} chunks
+              <span className="inline-flex items-center gap-1 text-[11px] text-slate-500">
+                <span>{totalChunks} chunks</span>
+                <span className="relative group/chunks inline-flex items-center">
+                  <Info
+                    className="w-3 h-3 text-slate-400 hover:text-indigo-600 dark:hover:text-indigo-400 cursor-help transition-colors"
+                    aria-label="Penjelasan tentang chunks"
+                  />
+                  <span className="pointer-events-none opacity-0 group-hover/chunks:opacity-100 transition-opacity duration-150 absolute right-0 top-full mt-1.5 w-56 p-2.5 rounded-xl bg-slate-900 text-slate-100 dark:bg-slate-800 dark:text-slate-100 border border-slate-700 shadow-xl text-[10px] leading-relaxed z-40">
+                    Chunks adalah potongan paragraf kecil hasil pemecahan dokumen PDF agar AI bisa membaca dan mencari jawaban secara akurat.
+                  </span>
+                </span>
               </span>
               <button
                 type="button"
@@ -471,19 +481,29 @@ export default function Sidebar({
       {/* Compact Footer: Top-K Selector */}
       <div className="px-4 py-3 border-t border-slate-200 dark:border-slate-800/80 bg-white dark:bg-slate-950 transition-colors">
         <div className="flex items-center justify-between gap-2">
-          <span className="text-[11px] font-medium text-slate-600 dark:text-slate-400">
-            Top-K Konteks
+          <span className="inline-flex items-center gap-1 text-[11px] font-medium text-slate-600 dark:text-slate-400">
+            <span>Jumlah Referensi (Top-K)</span>
+            <span className="relative group/topk inline-flex items-center">
+              <Info
+                className="w-3 h-3 text-slate-400 hover:text-indigo-600 dark:hover:text-indigo-400 cursor-help transition-colors"
+                aria-label="Penjelasan Jumlah Referensi (Top-K)"
+              />
+              <span className="pointer-events-none opacity-0 group-hover/topk:opacity-100 transition-opacity duration-150 absolute left-0 bottom-full mb-2 w-60 p-2.5 rounded-xl bg-slate-900 text-slate-100 dark:bg-slate-800 dark:text-slate-100 border border-slate-700 shadow-xl text-[10px] leading-relaxed z-40">
+                Mengatur berapa banyak potongan teks (chunks) yang diambil sebagai sumber jawaban. Pilih angka lebih besar untuk pertanyaan yang membutuhkan rangkuman luas.
+              </span>
+            </span>
           </span>
-          <div className="flex items-center gap-1">
+          <div className="flex items-center gap-1 shrink-0">
             {[3, 5, 8, 10].map((val) => (
               <button
                 key={val}
                 type="button"
                 onClick={() => onTopKChange(val)}
-                className={`w-7 h-6 rounded text-[11px] font-medium transition cursor-pointer ${topK === val
+                className={`w-6 h-6 rounded text-[11px] font-medium transition cursor-pointer ${
+                  topK === val
                     ? "bg-slate-900 text-white dark:bg-slate-200 dark:text-slate-950"
                     : "bg-slate-100 text-slate-600 hover:text-slate-900 border border-slate-200 dark:bg-slate-900 dark:text-slate-400 dark:hover:text-slate-200 dark:border-slate-800"
-                  }`}
+                }`}
               >
                 {val}
               </button>
