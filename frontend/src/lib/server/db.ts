@@ -44,17 +44,34 @@ export async function ensureSchema() {
   `;
 
   await sql`
+    CREATE TABLE IF NOT EXISTS documents (
+      id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+      user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+      filename TEXT NOT NULL,
+      total_chunks INTEGER NOT NULL DEFAULT 0,
+      created_at TIMESTAMPTZ DEFAULT NOW(),
+      UNIQUE (user_id, filename)
+    );
+  `;
+
+  await sql`
     CREATE TABLE IF NOT EXISTS document_chunks (
       id SERIAL PRIMARY KEY,
+      user_id UUID REFERENCES users(id) ON DELETE CASCADE,
       filename TEXT NOT NULL,
       page_number INTEGER NOT NULL,
       chunk_index INTEGER NOT NULL,
       content TEXT NOT NULL,
       embedding vector(768),
       owner_id TEXT NOT NULL DEFAULT 'public',
-      is_public BOOLEAN NOT NULL DEFAULT TRUE,
+      is_public BOOLEAN NOT NULL DEFAULT FALSE,
       created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
     );
+  `;
+
+  await sql`
+    ALTER TABLE document_chunks
+    ADD COLUMN IF NOT EXISTS user_id UUID REFERENCES users(id) ON DELETE CASCADE;
   `;
 
   await sql`
@@ -64,7 +81,7 @@ export async function ensureSchema() {
 
   await sql`
     ALTER TABLE document_chunks
-    ADD COLUMN IF NOT EXISTS is_public BOOLEAN NOT NULL DEFAULT TRUE;
+    ADD COLUMN IF NOT EXISTS is_public BOOLEAN NOT NULL DEFAULT FALSE;
   `;
 
   await sql`
@@ -73,8 +90,8 @@ export async function ensureSchema() {
   `;
 
   await sql`
-    CREATE INDEX IF NOT EXISTS document_chunks_owner_idx
-    ON document_chunks (owner_id, is_public, filename);
+    CREATE INDEX IF NOT EXISTS document_chunks_user_idx
+    ON document_chunks (user_id, filename);
   `;
 
   await sql`

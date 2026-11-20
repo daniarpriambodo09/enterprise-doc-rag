@@ -88,48 +88,52 @@ export async function POST(req: NextRequest) {
     `;
 
     // 4. Hybrid Search (70% Semantic Cosine Similarity + 30% PostgreSQL ts_rank Lexical Score)
-    const queryEmbedding = await getEmbedding(query);
-    const vecLiteral = JSON.stringify(queryEmbedding);
+    // Isolasi ketat per user: hanya mencari dokumen milik user yang sedang login
+    let rows: Record<string, unknown>[] = [];
+    if (actor.type === "user") {
+      const queryEmbedding = await getEmbedding(query);
+      const vecLiteral = JSON.stringify(queryEmbedding);
 
-    const rows = await sql`
-      WITH candidates AS (
+      rows = await sql`
+        WITH candidates AS (
+          SELECT
+            id,
+            filename,
+            page_number,
+            content,
+            (1 - (embedding <=> ${vecLiteral}::vector))::float AS vector_score,
+            ts_rank(to_tsvector('simple', content), plainto_tsquery('simple', ${query}))::float AS lexical_score
+          FROM document_chunks
+          WHERE user_id = ${actor.id}::uuid
+          ORDER BY embedding <=> ${vecLiteral}::vector
+          LIMIT 15
+        ),
+        scored AS (
+          SELECT
+            id,
+            filename,
+            page_number,
+            content,
+            vector_score,
+            lexical_score,
+            CASE
+              WHEN MAX(lexical_score) OVER () > 0
+                THEN (0.7 * vector_score) + (0.3 * (lexical_score / MAX(lexical_score) OVER ()))
+              ELSE (0.7 * vector_score)
+            END AS final_score
+          FROM candidates
+        )
         SELECT
           id,
           filename,
           page_number,
           content,
-          (1 - (embedding <=> ${vecLiteral}::vector))::float AS vector_score,
-          ts_rank(to_tsvector('simple', content), plainto_tsquery('simple', ${query}))::float AS lexical_score
-        FROM document_chunks
-        WHERE (is_public = TRUE OR owner_id = ${actor.id})
-        ORDER BY embedding <=> ${vecLiteral}::vector
-        LIMIT 15
-      ),
-      scored AS (
-        SELECT
-          id,
-          filename,
-          page_number,
-          content,
-          vector_score,
-          lexical_score,
-          CASE
-            WHEN MAX(lexical_score) OVER () > 0
-              THEN (0.7 * vector_score) + (0.3 * (lexical_score / MAX(lexical_score) OVER ()))
-            ELSE (0.7 * vector_score)
-          END AS final_score
-        FROM candidates
-      )
-      SELECT
-        id,
-        filename,
-        page_number,
-        content,
-        ROUND(final_score::numeric, 4)::float AS score
-      FROM scored
-      ORDER BY final_score DESC
-      LIMIT ${topK};
-    `;
+          ROUND(final_score::numeric, 4)::float AS score
+        FROM scored
+        ORDER BY final_score DESC
+        LIMIT ${topK};
+      `;
+    }
 
     let answerText: string;
     let sources: {
@@ -141,7 +145,9 @@ export async function POST(req: NextRequest) {
 
     if (rows.length === 0) {
       answerText =
-        "Belum ada dokumen yang diunggah atau tidak ditemukan konteks yang relevan.";
+        actor.type !== "user"
+          ? "Silakan masuk ke akun Anda dan unggah dokumen PDF pribadi terlebih dahulu untuk mulai bertanya."
+          : "Belum ada dokumen yang diunggah ke akun Anda atau tidak ditemukan konteks yang relevan.";
     } else {
       const contextBlocks = rows.map(
         (chunk) =>

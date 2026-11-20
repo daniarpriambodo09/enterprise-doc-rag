@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { extractText } from "unpdf";
-import { getCurrentActor, hasValidAdminPasscode } from "@/lib/server/auth";
+import { getCurrentActor } from "@/lib/server/auth";
 import { ensureSchema, getDb } from "@/lib/server/db";
 import { chunkPages } from "@/lib/server/chunker";
 import {
@@ -15,22 +15,18 @@ export const maxDuration = 60;
 
 export async function POST(req: NextRequest) {
   const actor = await getCurrentActor(req);
-  const isAdminPass = hasValidAdminPasscode(req);
-  const isAdmin =
-    isAdminPass || (actor.type === "user" && actor.role === "admin");
 
-  if (actor.type === "guest" && !isAdminPass) {
+  if (actor.type !== "user") {
     return NextResponse.json(
       {
         detail:
-          "Mode Demo Publik: Masuk ke akun Anda untuk mengunggah dokumen pribadi, atau masukkan Admin Passcode.",
+          "Silakan masuk ke akun Anda terlebih dahulu untuk mengunggah dokumen pribadi.",
       },
       { status: 401 }
     );
   }
 
-  const ownerId = isAdmin ? "public" : actor.id;
-  const isPublic = isAdmin;
+  const userId = actor.id;
 
   try {
     const contentType = req.headers.get("content-type") || "";
@@ -199,17 +195,29 @@ export async function POST(req: NextRequest) {
     await ensureSchema();
     const sql = getDb();
 
-    // Anti-duplikasi: hanya hapus chunk lama milik owner yang sama pada batch pertama
+    // Anti-duplikasi: hanya hapus chunk lama milik user saat ini pada batch pertama
     let overwrittenChunks = 0;
     if (isFirstBatch) {
       const deletedRows = await sql`
         DELETE FROM document_chunks
         WHERE filename = ${targetFilename}
-          AND owner_id = ${ownerId}
-          AND is_public = ${isPublic}
+          AND user_id = ${userId}::uuid
         RETURNING id;
       `;
       overwrittenChunks = deletedRows.length;
+
+      await sql`
+        INSERT INTO documents (user_id, filename, total_chunks)
+        VALUES (${userId}::uuid, ${targetFilename}, ${chunks.length})
+        ON CONFLICT (user_id, filename)
+        DO UPDATE SET total_chunks = ${chunks.length}, created_at = NOW();
+      `;
+    } else {
+      await sql`
+        UPDATE documents
+        SET total_chunks = total_chunks + ${chunks.length}
+        WHERE user_id = ${userId}::uuid AND filename = ${targetFilename};
+      `;
     }
 
     // Batch insert multi-row per 50 baris untuk meminimalkan round-trip HTTP ke Neon
@@ -221,23 +229,24 @@ export async function POST(req: NextRequest) {
 
       for (let i = start; i < end; i++) {
         const chunk = chunks[i];
-        const base = (i - start) * 7;
+        const base = (i - start) * 8;
         valuesClauses.push(
-          `($${base + 1}, $${base + 2}, $${base + 3}, $${base + 4}, $${base + 5}::vector, $${base + 6}, $${base + 7})`
+          `($${base + 1}::uuid, $${base + 2}, $${base + 3}, $${base + 4}, $${base + 5}, $${base + 6}::vector, $${base + 7}, $${base + 8})`
         );
         params.push(
+          userId,
           chunk.filename,
           chunk.page_number,
           chunk.chunk_index,
           chunk.content,
           JSON.stringify(embeddings[i]),
-          ownerId,
-          isPublic
+          userId,
+          false
         );
       }
 
       await sql.query(
-        `INSERT INTO document_chunks (filename, page_number, chunk_index, content, embedding, owner_id, is_public) VALUES ${valuesClauses.join(", ")};`,
+        `INSERT INTO document_chunks (user_id, filename, page_number, chunk_index, content, embedding, owner_id, is_public) VALUES ${valuesClauses.join(", ")};`,
         params
       );
     }

@@ -1,5 +1,5 @@
 import { connection, NextRequest, NextResponse } from "next/server";
-import { getCurrentActor, hasValidAdminPasscode } from "@/lib/server/auth";
+import { getCurrentActor } from "@/lib/server/auth";
 import { ensureSchema, getDb } from "@/lib/server/db";
 
 export async function GET(req: NextRequest) {
@@ -7,9 +7,11 @@ export async function GET(req: NextRequest) {
   try {
     await ensureSchema();
     const actor = await getCurrentActor(req);
-    const isAdminPass = hasValidAdminPasscode(req);
-    const isAdmin =
-      isAdminPass || (actor.type === "user" && actor.role === "admin");
+
+    // Isolasi ketat per user: pengunjung yang belum login tidak melihat dokumen siapa pun
+    if (actor.type !== "user") {
+      return NextResponse.json([]);
+    }
 
     const sql = getDb();
 
@@ -17,32 +19,22 @@ export async function GET(req: NextRequest) {
       SELECT
         filename,
         COUNT(*)::int AS total_chunks,
-        MAX(created_at) AS uploaded_at,
-        BOOL_OR(is_public) AS is_public,
-        MAX(owner_id) AS owner_id
+        MAX(created_at) AS uploaded_at
       FROM document_chunks
-      WHERE is_public = TRUE OR owner_id = ${actor.id}
-      GROUP BY filename, is_public, owner_id
+      WHERE user_id = ${actor.id}::uuid
+      GROUP BY filename
       ORDER BY uploaded_at DESC;
     `;
 
     return NextResponse.json(
-      rows.map((r) => {
-        const isPublic = Boolean(r.is_public);
-        const ownerId = String(r.owner_id ?? "public");
-        const canDelete =
-          isAdmin || (actor.type === "user" && !isPublic && ownerId === actor.id);
-
-        return {
-          filename: String(r.filename),
-          total_chunks: Number(r.total_chunks),
-          uploaded_at: r.uploaded_at
-            ? new Date(String(r.uploaded_at)).toISOString()
-            : "",
-          is_public: isPublic,
-          can_delete: canDelete,
-        };
-      })
+      rows.map((r) => ({
+        filename: String(r.filename),
+        total_chunks: Number(r.total_chunks),
+        uploaded_at: r.uploaded_at
+          ? new Date(String(r.uploaded_at)).toISOString()
+          : "",
+        can_delete: true,
+      }))
     );
   } catch (error: unknown) {
     console.error("List documents error:", error);

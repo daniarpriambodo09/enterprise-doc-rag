@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState, useEffect, useRef } from "react";
-import { Send, Loader2, Sparkles, Lock, X } from "lucide-react";
+import { Send, Loader2 } from "lucide-react";
 import {
   fetchDocuments,
   uploadDocument,
@@ -14,8 +14,6 @@ import {
   logoutUser,
   AdminAuthError,
   getOrCreateGuestId,
-  getStoredAdminPasscode,
-  setStoredAdminPasscode,
   DocumentItem,
   ChatSessionItem,
   UserProfile,
@@ -60,11 +58,7 @@ export default function RagWorkspace() {
   const [isMobileSidebarOpen, setIsMobileSidebarOpen] = useState(false);
   const [currentUser, setCurrentUser] = useState<UserProfile | null>(null);
   const [isAuthModalOpen, setIsAuthModalOpen] = useState(false);
-  const [hasAdminPasscode, setHasAdminPasscode] = useState(false);
-  const [isAdminModalOpen, setIsAdminModalOpen] = useState(false);
-  const [adminPasscodeInput, setAdminPasscodeInput] = useState("");
-  const [adminModalNotice, setAdminModalNotice] = useState<string | null>(null);
-  const [pendingAdminAction, setPendingAdminAction] = useState<
+  const [pendingAuthAction, setPendingAuthAction] = useState<
     | { type: "upload"; file: File }
     | { type: "delete"; filename: string }
     | null
@@ -93,7 +87,6 @@ export default function RagWorkspace() {
 
   useEffect(() => {
     getOrCreateGuestId();
-    setHasAdminPasscode(Boolean(getStoredAdminPasscode()));
     fetchCurrentUser().then((user) => setCurrentUser(user));
     loadDocs();
     loadSessions();
@@ -142,10 +135,8 @@ export default function RagWorkspace() {
       await loadDocs();
     } catch (err: unknown) {
       if (err instanceof AdminAuthError) {
-        setPendingAdminAction({ type: "upload", file });
-        setAdminModalNotice(err.message);
-        setAdminPasscodeInput(getStoredAdminPasscode());
-        setIsAdminModalOpen(true);
+        setPendingAuthAction({ type: "upload", file });
+        setIsAuthModalOpen(true);
         return;
       }
       const message = err instanceof Error ? err.message : "Upload gagal";
@@ -168,10 +159,8 @@ export default function RagWorkspace() {
       await loadDocs();
     } catch (err: unknown) {
       if (err instanceof AdminAuthError) {
-        setPendingAdminAction({ type: "delete", filename });
-        setAdminModalNotice(err.message);
-        setAdminPasscodeInput(getStoredAdminPasscode());
-        setIsAdminModalOpen(true);
+        setPendingAuthAction({ type: "delete", filename });
+        setIsAuthModalOpen(true);
         return;
       }
       const message = err instanceof Error ? err.message : "Gagal menghapus dokumen";
@@ -181,44 +170,11 @@ export default function RagWorkspace() {
     }
   };
 
-  const handleOpenAdminModal = () => {
-    setAdminPasscodeInput(getStoredAdminPasscode());
-    setAdminModalNotice(null);
-    setPendingAdminAction(null);
-    setIsAdminModalOpen(true);
-  };
-
-  const handleSaveAdminPasscode = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setStoredAdminPasscode(adminPasscodeInput);
-    setHasAdminPasscode(Boolean(adminPasscodeInput.trim()));
-    setIsAdminModalOpen(false);
-    setAdminModalNotice(null);
-
-    const action = pendingAdminAction;
-    setPendingAdminAction(null);
-    if (action?.type === "upload") {
-      await handleFileUpload(action.file);
-    } else if (action?.type === "delete") {
-      await handleDeleteDocument(action.filename);
-    }
-  };
-
-  const handleClearAdminPasscode = () => {
-    setStoredAdminPasscode("");
-    setAdminPasscodeInput("");
-    setHasAdminPasscode(false);
-    setPendingAdminAction(null);
-    setIsAdminModalOpen(false);
-    loadDocs();
-  };
-
   const handleAuthSuccess = async (user: UserProfile) => {
     setCurrentUser(user);
     await Promise.all([loadDocs(), loadSessions()]);
-    const action = pendingAdminAction;
-    setPendingAdminAction(null);
-    setIsAdminModalOpen(false);
+    const action = pendingAuthAction;
+    setPendingAuthAction(null);
     if (action?.type === "upload") {
       await handleFileUpload(action.file);
     } else if (action?.type === "delete") {
@@ -357,6 +313,7 @@ export default function RagWorkspace() {
           documents={documents}
           sessions={sessions}
           activeSessionId={activeSessionId}
+          isAuthenticated={Boolean(currentUser)}
           isUploading={isUploading}
           uploadProgress={uploadProgress}
           deletingFilename={deletingFilename}
@@ -369,8 +326,7 @@ export default function RagWorkspace() {
           onNewChat={handleNewChat}
           onSelectSession={handleSelectSession}
           onDeleteSession={handleDeleteSession}
-          hasAdminPasscode={hasAdminPasscode}
-          onOpenAdminModal={handleOpenAdminModal}
+          onOpenAuthModal={() => setIsAuthModalOpen(true)}
           isOpenMobile={isMobileSidebarOpen}
           onCloseMobile={() => setIsMobileSidebarOpen(false)}
         />
@@ -397,6 +353,7 @@ export default function RagWorkspace() {
           ) : messages.length === 0 ? (
             <EmptyState
               documentCount={documents.length}
+              isAuthenticated={Boolean(currentUser)}
               onSelectPrompt={(prompt) => {
                 setInput(prompt);
                 textareaRef.current?.focus();
@@ -413,7 +370,6 @@ export default function RagWorkspace() {
               </div>
               <div className="rounded-2xl rounded-tl-sm px-5 py-4 bg-white border border-slate-200 dark:bg-slate-900/80 dark:border-slate-800/90 backdrop-blur-sm max-w-md w-full shadow-sm">
                 <div className="flex items-center gap-2 text-xs font-medium text-indigo-700 dark:text-indigo-300 mb-2.5">
-                  <Sparkles className="w-3.5 h-3.5 animate-pulse" />
                   <span>Mencari konteks (Top-{topK}) & menyusun jawaban...</span>
                 </div>
                 <div className="space-y-2">
@@ -458,96 +414,13 @@ export default function RagWorkspace() {
         </div>
       </main>
 
-      {/* Modal Admin Passcode */}
-      {isAdminModalOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/60 dark:bg-slate-950/80 backdrop-blur-sm">
-          <div className="w-full max-w-sm rounded-2xl bg-white border border-slate-200 dark:bg-slate-900 dark:border-slate-800 p-5 shadow-2xl animate-fade-in-up">
-            <div className="flex items-center justify-between mb-3">
-              <div className="flex items-center gap-2">
-                <div className="p-1.5 rounded-lg bg-slate-100 border border-slate-200 text-slate-700 dark:bg-slate-800 dark:border-slate-700 dark:text-slate-200">
-                  <Lock className="w-4 h-4" />
-                </div>
-                <h2 className="text-sm font-semibold text-slate-900 dark:text-white">
-                  Admin Mode
-                </h2>
-              </div>
-              <button
-                type="button"
-                onClick={() => {
-                  setIsAdminModalOpen(false);
-                  setPendingAdminAction(null);
-                }}
-                className="p-1 rounded-lg text-slate-500 hover:text-slate-900 hover:bg-slate-100 dark:text-slate-400 dark:hover:text-white dark:hover:bg-slate-800 transition cursor-pointer"
-                aria-label="Tutup modal"
-              >
-                <X className="w-4 h-4" />
-              </button>
-            </div>
-
-            <p className="text-xs text-slate-600 dark:text-slate-400 leading-relaxed mb-3">
-              {adminModalNotice ||
-                "Masukkan Admin Passcode untuk mengaktifkan fitur unggah dan hapus dokumen pada mode demo publik."}
-            </p>
-
-            <form onSubmit={handleSaveAdminPasscode} className="space-y-3">
-              <input
-                type="password"
-                value={adminPasscodeInput}
-                onChange={(e) => setAdminPasscodeInput(e.target.value)}
-                placeholder="Masukkan Admin Passcode..."
-                autoFocus
-                className="w-full bg-slate-50 border border-slate-300 text-slate-900 placeholder-slate-400 dark:bg-slate-950 dark:border-slate-700 rounded-xl px-3.5 py-2.5 text-sm dark:text-slate-100 dark:placeholder-slate-500 focus:outline-none focus:border-indigo-500"
-              />
-              <div className="flex items-center justify-between gap-2 pt-1">
-                {hasAdminPasscode ? (
-                  <button
-                    type="button"
-                    onClick={handleClearAdminPasscode}
-                    className="px-3 py-2 rounded-xl text-xs font-medium text-rose-600 hover:bg-rose-50 border border-rose-200 dark:text-rose-300 dark:hover:bg-rose-500/10 dark:border-rose-500/20 transition cursor-pointer"
-                  >
-                    Keluar Admin
-                  </button>
-                ) : (
-                  <span />
-                )}
-                <div className="flex items-center gap-2">
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setIsAdminModalOpen(false);
-                      setIsAuthModalOpen(true);
-                    }}
-                    className="px-3 py-2 rounded-xl text-xs font-medium text-indigo-600 hover:bg-indigo-50 dark:text-indigo-400 dark:hover:bg-indigo-950/50 transition cursor-pointer"
-                  >
-                    Masuk / Daftar
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setIsAdminModalOpen(false);
-                      setPendingAdminAction(null);
-                    }}
-                    className="px-3 py-2 rounded-xl text-xs font-medium text-slate-600 hover:bg-slate-100 dark:text-slate-300 dark:hover:bg-slate-800 transition cursor-pointer"
-                  >
-                    Batal
-                  </button>
-                  <button
-                    type="submit"
-                    className="px-4 py-2 rounded-xl bg-slate-900 hover:bg-slate-800 text-white dark:bg-slate-100 dark:hover:bg-white dark:text-slate-950 text-xs font-semibold transition cursor-pointer"
-                  >
-                    {pendingAdminAction ? "Simpan & Lanjutkan" : "Simpan"}
-                  </button>
-                </div>
-              </div>
-            </form>
-          </div>
-        </div>
-      )}
-
       {/* Modal Login & Register */}
       <AuthModal
         isOpen={isAuthModalOpen}
-        onClose={() => setIsAuthModalOpen(false)}
+        onClose={() => {
+          setIsAuthModalOpen(false);
+          setPendingAuthAction(null);
+        }}
         onAuthSuccess={handleAuthSuccess}
       />
     </div>
